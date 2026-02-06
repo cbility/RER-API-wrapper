@@ -1,0 +1,790 @@
+openapi: 3.0.3
+info:
+  title: Ofgem RER (Renewable Electricity Register) API
+  description: |
+    Internal API endpoints used by the Ofgem Renewable Electricity Register (RER) portal.
+    This specification documents the HTTP endpoints used by the web application for user 
+    authentication, user management, and organisation management.
+    
+    **Authentication Flow:**
+    The application uses Azure AD B2C with OpenID Connect (OIDC) for authentication.
+    The flow uses PKCE (Proof Key for Code Exchange) for enhanced security.
+    
+    **Base URL:** https://rer.ofgem.gov.uk
+    
+  version: 1.0.0
+  contact:
+    name: RER Support
+    url: https://rer.ofgem.gov.uk/Home/ContactUs
+servers:
+  - url: https://rer.ofgem.gov.uk
+    description: Production server
+  - url: https://pk8sprdofgemcloudb2c.b2clogin.com/pk8sprdofgemcloudb2c.onmicrosoft.com
+    description: Azure AD B2C Authentication Server
+
+tags:
+  - name: Authentication
+    description: Azure AD B2C OpenID Connect authentication endpoints
+  - name: User
+    description: User profile and dashboard operations
+  - name: Account
+    description: Account management operations
+  - name: Organisations
+    description: Organisation management operations
+
+paths:
+  # ==================== Authentication Endpoints ====================
+  
+  /Account/SignIn:
+    get:
+      tags:
+        - Authentication
+      summary: Initiate sign-in flow
+      description: |
+        Redirects the user to the Azure AD B2C login page to begin the authentication process.
+        This endpoint initiates the OAuth2/OIDC authorization code flow with PKCE.
+      responses:
+        '302':
+          description: Redirect to Azure AD B2C authorize endpoint
+          headers:
+            Location:
+              schema:
+                type: string
+                example: https://pk8sprdofgemcloudb2c.b2clogin.com/pk8sprdofgemcloudb2c.onmicrosoft.com/b2c_1a_rer_signin/oauth2/v2.0/authorize?client_id=...
+  
+  /b2c_1a_rer_signin/oauth2/v2.0/authorize:
+    servers:
+      - url: https://pk8sprdofgemcloudb2c.b2clogin.com/pk8sprdofgemcloudb2c.onmicrosoft.com
+    get:
+      tags:
+        - Authentication
+      summary: Azure AD B2C Authorization Endpoint
+      description: |
+        OAuth 2.0 authorization endpoint for Azure AD B2C. Presents the login page to the user.
+        Uses the B2C_1A_RER_Signin custom policy.
+      parameters:
+        - name: client_id
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "05624aa9-bc87-4076-88c3-fd451bb29006"
+          description: Application (client) ID
+        - name: redirect_uri
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "https://rer.ofgem.gov.uk/signin-oidc"
+          description: Redirect URI after authentication
+        - name: response_type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [code]
+          description: OAuth2 response type
+        - name: scope
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "openid profile offline_access https://pk8sprdofgemcloudb2c.onmicrosoft.com/rercoreservices/user_impersonation"
+          description: Requested scopes
+        - name: code_challenge
+          in: query
+          required: true
+          schema:
+            type: string
+          description: PKCE code challenge
+        - name: code_challenge_method
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [S256]
+          description: PKCE code challenge method
+        - name: response_mode
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [form_post]
+          description: How the authorization response is returned
+        - name: nonce
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Nonce for replay protection
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Opaque state value for CSRF protection
+        - name: client_info
+          in: query
+          schema:
+            type: integer
+            enum: [0, 1]
+          description: Whether to include client info in response
+        - name: x-client-SKU
+          in: query
+          schema:
+            type: string
+            example: "ID_NET8_0"
+        - name: x-client-ver
+          in: query
+          schema:
+            type: string
+            example: "8.13.0.0"
+      responses:
+        '200':
+          description: Login page HTML
+          content:
+            text/html:
+              schema:
+                type: string
+  
+  /B2C_1A_RER_Signin/SelfAsserted:
+    servers:
+      - url: https://pk8sprdofgemcloudb2c.b2clogin.com/pk8sprdofgemcloudb2c.onmicrosoft.com
+    post:
+      tags:
+        - Authentication
+      summary: Submit credentials
+      description: |
+        Endpoint for submitting user credentials (email and password) during the sign-in flow.
+        This is called by the Azure AD B2C custom UI.
+      parameters:
+        - name: tx
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Transaction context parameter
+        - name: p
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "B2C_1A_RER_Signin"
+          description: Policy name
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - request_type
+                - signInName
+                - password
+              properties:
+                request_type:
+                  type: string
+                  enum: [RESPONSE]
+                  description: Request type indicator
+                signInName:
+                  type: string
+                  format: email
+                  description: User email address
+                password:
+                  type: string
+                  format: password
+                  description: User password
+      security:
+        - csrfToken: []
+      responses:
+        '200':
+          description: Authentication successful, proceed to MFA
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+
+  /B2C_1A_RER_Signin/Phonefactor/verify:
+    servers:
+      - url: https://pk8sprdofgemcloudb2c.b2clogin.com/pk8sprdofgemcloudb2c.onmicrosoft.com
+    post:
+      tags:
+        - Authentication
+      summary: Multi-factor authentication verification
+      description: |
+        Endpoint for initiating and verifying multi-factor authentication (MFA) using phone/SMS.
+        This is part of the Azure AD B2C authentication flow.
+      parameters:
+        - name: tx
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Transaction context parameter
+        - name: p
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "B2C_1A_RER_Signin"
+      security:
+        - csrfToken: []
+      responses:
+        '200':
+          description: MFA verification status
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /signin-oidc:
+    post:
+      tags:
+        - Authentication
+      summary: OpenID Connect callback
+      description: |
+        Callback endpoint that receives the authorization code from Azure AD B2C after successful authentication.
+        Exchanges the code for tokens and establishes the user session.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - code
+                - state
+              properties:
+                code:
+                  type: string
+                  description: Authorization code from Azure AD B2C
+                state:
+                  type: string
+                  description: State parameter for CSRF protection
+                client_info:
+                  type: string
+                  description: Base64-encoded client information
+      responses:
+        '302':
+          description: Redirect to application home page after successful authentication
+          headers:
+            Location:
+              schema:
+                type: string
+                example: "/User"
+            Set-Cookie:
+              schema:
+                type: string
+                description: Authentication cookies
+          
+  /Account/SignOut:
+    get:
+      tags:
+        - Authentication
+      summary: Sign out
+      description: Terminates the user session and signs the user out
+      security:
+        - cookieAuth: []
+      responses:
+        '302':
+          description: Redirect to sign-in page
+          headers:
+            Location:
+              schema:
+                type: string
+
+  # ==================== User Endpoints ====================
+  
+  /User:
+    get:
+      tags:
+        - User
+      summary: Get user dashboard
+      description: |
+        Returns the user dashboard page with an overview of organisations, tasks, and statistics.
+        Shows a list of organisations the user has access to with pagination support.
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: sortField
+          in: query
+          schema:
+            type: string
+            enum: [Organisation, OrganisationType, OrganisationTasks, OrganisationStatus, UserStatus]
+          description: Field to sort by
+        - name: sortDirection
+          in: query
+          schema:
+            type: string
+            enum: [Asc, Desc]
+          description: Sort direction
+        - name: pageNumber
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+      responses:
+        '200':
+          description: User dashboard HTML page
+          content:
+            text/html:
+              schema:
+                type: string
+          headers:
+            X-Correlation-Id:
+              schema:
+                type: string
+                format: uuid
+              description: Correlation ID for request tracking
+        '401':
+          description: Unauthorized - user not authenticated
+        '302':
+          description: Redirect to login if not authenticated
+  
+  /User/Activity:
+    get:
+      tags:
+        - User
+      summary: Get user activity log
+      description: |
+        Returns a timeline of user activities including submissions, updates, and other actions
+        performed by the user across all organisations.
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: expandActivityDetails
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Whether to expand all activity details
+      responses:
+        '200':
+          description: User activity timeline HTML page
+          content:
+            text/html:
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+  
+  /User/Ownership:
+    get:
+      tags:
+        - User
+      summary: Get user ownership information
+      description: Returns information about organisations and entities owned or managed by the user
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: User ownership information HTML page
+          content:
+            text/html:
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+
+  /User/Notifications:
+    get:
+      tags:
+        - User
+      summary: Get user notifications
+      description: Returns notifications and alerts for the user
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: User notifications HTML page
+          content:
+            text/html:
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+
+  # ==================== Account Management Endpoints ====================
+  
+  /Account/EditProfile:
+    get:
+      tags:
+        - Account
+      summary: Get edit profile form
+      description: Returns the form for editing user profile information
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Edit profile form HTML
+          content:
+            text/html:
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+    
+    post:
+      tags:
+        - Account
+      summary: Update user profile
+      description: Updates user profile information
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                email:
+                  type: string
+                  format: email
+      responses:
+        '302':
+          description: Redirect to user dashboard after successful update
+        '400':
+          description: Validation error
+        '401':
+          description: Unauthorized
+
+  /Account/EditPhoneNumber:
+    get:
+      tags:
+        - Account
+      summary: Get edit phone number form
+      description: Returns the form for editing user phone number
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Edit phone number form HTML
+          content:
+            text/html:
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+
+  /Account/ChangePassword:
+    get:
+      tags:
+        - Account
+      summary: Get change password form
+      description: Returns the form for changing user password
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Change password form HTML
+          content:
+            text/html:
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+
+  # ==================== Organisation Endpoints ====================
+  
+  /Organisations/{organisationId}:
+    get:
+      tags:
+        - Organisations
+      summary: Get organisation details
+      description: |
+        Returns detailed information about a specific organisation including 
+        stations, tasks, users, and other related data.
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: organisationId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^GEN[0-9]{7}$'
+          description: Organisation ID (e.g., GEN0215941)
+          example: "GEN0215941"
+      responses:
+        '200':
+          description: Organisation details HTML page
+          content:
+            text/html:
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden - user doesn't have access to this organisation
+        '404':
+          description: Organisation not found
+
+  /Organisations/{organisationId}/Tasks/OutputData:
+    get:
+      tags:
+        - Organisations
+      summary: Get output data tasks for an organisation
+      description: |
+        Returns a list of output data tasks (submissions) for a specific organisation.
+        Tasks can be filtered by status (Draft, WithApplicant, etc.) and support 
+        sorting and pagination.
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: organisationId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^GEN[0-9]{7}$'
+          description: Organisation ID
+          example: "GEN0215941"
+        - name: Statuses
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [Draft, WithApplicant, Submitted, WithOfgem, Approved, Rejected]
+          description: Filter tasks by status
+          example: ["Draft"]
+        - name: sortField
+          in: query
+          schema:
+            type: string
+            enum: [Period, Station, DueDate]
+          description: Field to sort by
+        - name: sortDirection
+          in: query
+          schema:
+            type: string
+            enum: [Asc, Desc]
+          description: Sort direction
+        - name: pageNumber
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+      responses:
+        '200':
+          description: Output data tasks list HTML page
+          content:
+            text/html:
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Organisation not found
+
+  /Organisations/{organisationId}/Tasks/StationDeclarations:
+    get:
+      tags:
+        - Organisations
+      summary: Get station declaration tasks for an organisation
+      description: |
+        Returns a list of station declaration tasks that need to be completed
+        for the organisation's generating stations.
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: organisationId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^GEN[0-9]{7}$'
+          description: Organisation ID
+          example: "GEN0215941"
+        - name: sortField
+          in: query
+          schema:
+            type: string
+          description: Field to sort by
+        - name: sortDirection
+          in: query
+          schema:
+            type: string
+            enum: [Asc, Desc]
+          description: Sort direction
+        - name: pageNumber
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+      responses:
+        '200':
+          description: Station declaration tasks list HTML page
+          content:
+            text/html:
+              schema:
+                type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Organisation not found
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: .AspNetCore.Cookies
+      description: |
+        ASP.NET Core authentication cookie set after successful OIDC authentication.
+        This cookie contains encrypted session information.
+    
+    csrfToken:
+      type: apiKey
+      in: header
+      name: x-csrf-token
+      description: |
+        CSRF token used by Azure AD B2C for protection against cross-site request forgery.
+        Obtained from the x-ms-cpim-csrf cookie.
+
+  schemas:
+    User:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phoneNumber:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+    
+    Organisation:
+      type: object
+      properties:
+        organisationId:
+          type: string
+          pattern: '^GEN[0-9]{7}$'
+          example: "GEN0215941"
+        name:
+          type: string
+          example: "DRONLEY FARMING LTD"
+        type:
+          type: string
+          enum: [Generator, Supplier, Agent]
+          example: "Generator"
+        status:
+          type: string
+          enum: [DRAFT, PENDING, APPROVED, SUSPENDED, WITHDRAWN]
+          example: "APPROVED"
+        userStatus:
+          type: string
+          enum: [ACTIVE, INACTIVE, PENDING]
+          example: "ACTIVE"
+        taskCount:
+          type: integer
+          description: Number of outstanding tasks
+          example: 19
+    
+    OrganisationList:
+      type: object
+      properties:
+        totalCount:
+          type: integer
+          description: Total number of organisations
+        pageNumber:
+          type: integer
+          description: Current page number
+        pageSize:
+          type: integer
+          description: Number of items per page
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Organisation'
+    
+    Task:
+      type: object
+      properties:
+        taskId:
+          type: string
+          format: uuid
+          description: Unique task identifier
+        taskType:
+          type: string
+          enum: [OutputData, StationDeclaration, Certificate, Accreditation, Other]
+          description: Type of task
+        status:
+          type: string
+          enum: [Draft, WithApplicant, Submitted, WithOfgem, Approved, Rejected]
+          description: Current status of the task
+        period:
+          type: string
+          description: Period the task relates to (e.g., "DEC 2025")
+          example: "DEC 2025"
+        dueDate:
+          type: string
+          format: date-time
+          description: Task due date
+        stationName:
+          type: string
+          description: Name of the station the task relates to
+        organisationId:
+          type: string
+          pattern: '^GEN[0-9]{7}$'
+          description: Organisation ID the task belongs to
+    
+    TaskSummary:
+      type: object
+      description: Summary of tasks by type
+      properties:
+        taskType:
+          type: string
+          description: Type of task
+        taskName:
+          type: string
+          description: Display name for the task type
+          example: "Output Data (Due)"
+        count:
+          type: integer
+          description: Number of tasks of this type
+          example: 10
+
+  responses:
+    Unauthorized:
+      description: Authentication is required
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+    
+    Forbidden:
+      description: User does not have permission to access this resource
+    
+    NotFound:
+      description: The requested resource was not found
+
+security:
+  - cookieAuth: []
