@@ -4,6 +4,7 @@ Returns raw Gmail API message objects.
 """
 
 import os
+import logging
 from datetime import datetime
 from typing import List, TypedDict, NotRequired
 
@@ -11,6 +12,13 @@ from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 
+logger = logging.getLogger(__name__)
+
+class GmailMessageBody(TypedDict):
+    """Body of a Gmail message part."""
+    data: str  # Base64-encoded content
+    size: int
+    attachmentId: NotRequired[str]  # Only for attachments
 
 class GmailMessageHeader(TypedDict):
     """Gmail message header (e.g., Subject, From, To, Date)."""
@@ -24,7 +32,7 @@ class GmailMessagePart(TypedDict, total=False):
     mimeType: str
     filename: str
     headers: List[GmailMessageHeader]
-    body: dict  # Contains 'data', 'size', 'attachmentId'
+    body: GmailMessageBody 
     parts: List['GmailMessagePart']  # Nested parts for multipart messages
 
 
@@ -34,7 +42,7 @@ class GmailMessagePayload(TypedDict, total=False):
     mimeType: str
     filename: str
     headers: List[GmailMessageHeader]
-    body: dict
+    body: GmailMessageBody
     parts: List[GmailMessagePart]
 
 
@@ -125,7 +133,10 @@ def get_gmail_messages(since_date: datetime, max_messages: int = 100, token_file
     
     message_ids = results.get('messages', [])
     if not message_ids:
+        logger.debug("No messages found")
         return []
+    
+    logger.debug(f"Retrieved {len(message_ids)} message IDs")
     
     # Fetch full message details
     messages = []
@@ -133,12 +144,30 @@ def get_gmail_messages(since_date: datetime, max_messages: int = 100, token_file
         msg = service.users().messages().get(userId='me', id=msg_ref['id'], format='full').execute()
         messages.append(msg)
     
+    # Log received times at debug level
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug(f"Message received times:")
+        for idx, msg in enumerate(messages, 1):
+            internal_date = msg.get('internalDate', 'Unknown')
+            # internalDate is epoch milliseconds
+            if internal_date != 'Unknown':
+                dt = datetime.fromtimestamp(int(internal_date) / 1000)
+                logger.debug(f"  [{idx}] {msg['id']}: {dt.strftime('%Y-%m-%d %H:%M:%S')}")
+            else:
+                logger.debug(f"  [{idx}] {msg['id']}: Unknown")
+    
     return messages
 
 
 if __name__ == "__main__":
     from datetime import timedelta
     import json
+    
+    # Enable debug logging
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
     
     # Get messages from the last 7 days
     since = datetime.now() - timedelta(days=7)
