@@ -1,7 +1,4 @@
-"""
-Gmail message retrieval using Gmail API (OAuth2).
-Returns raw Gmail API message objects.
-"""
+# region imports
 
 import os
 import logging
@@ -12,7 +9,49 @@ from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 
+# endregion imports
+
+# region config
+
 logger = logging.getLogger(__name__)
+
+def get_no_token_error_message(token_file: str) -> str:
+    return f"""
+            {'='*80}"
+            ERROR: {token_file} not found!"
+            {'='*80}"
+            Gmail API requires OAuth2 authentication. Follow these steps:"
+            1. CREATE OAUTH2 CREDENTIALS:"
+               → Go to: https://console.cloud.google.com/apis/credentials"
+               → Click '+ CREATE CREDENTIALS' → 'OAuth client ID'"
+               → Application type: 'Desktop app'"
+               → Click 'CREATE' and download JSON"
+               → Save as 'gmail_credentials.json' in this directory"
+            2. ENABLE GMAIL API:"
+               → https://console.cloud.google.com/apis/library/gmail.googleapis.com"
+               → Click 'ENABLE'"
+            3. ADD TEST USER:"
+               → https://console.cloud.google.com/apis/credentials/consent"
+               → Under 'Test users', click '+ ADD USERS'"
+               → Add your Gmail address"
+            4. RUN OAUTH FLOW:"
+               → Run this Python code:"
+                 from google_auth_oauthlib.flow import InstalledAppFlow"
+                 flow = InstalledAppFlow.from_client_secrets_file("
+                     'gmail_credentials.json',"
+                     ['https://mail.google.com/']"
+                 )"
+                 creds = flow.run_local_server(port=0)"
+                 with open('{token_file}', 'w') as f:"
+                     f.write(creds.to_json())"
+               → A browser will open for authorization"
+               → Click 'Continue' or 'Advanced' → 'Go to [app] (unsafe)'"
+               → Authorize access"
+            Once {token_file} is created, this function will work persistently."
+            {'='*80}"
+            """
+# endregion config
+# region types
 
 class GmailMessageBody(TypedDict):
     """Body of a Gmail message part."""
@@ -61,6 +100,9 @@ class GmailMessage(TypedDict):
     internalDate: NotRequired[str]
     raw: NotRequired[str]
 
+# endregion types
+
+# region main
 
 def get_gmail_messages(since_date: datetime, max_messages: int = 100, token_file: str = "gmail_token.json") -> List[GmailMessage]:
     """
@@ -81,38 +123,7 @@ def get_gmail_messages(since_date: datetime, max_messages: int = 100, token_file
     # Check token file exists
     if not os.path.exists(token_file):
         raise FileNotFoundError(
-            f"\n{'='*80}\n"
-            f"ERROR: {token_file} not found!\n"
-            f"{'='*80}\n\n"
-            f"Gmail API requires OAuth2 authentication. Follow these steps:\n\n"
-            f"1. CREATE OAUTH2 CREDENTIALS:\n"
-            f"   → Go to: https://console.cloud.google.com/apis/credentials\n"
-            f"   → Click '+ CREATE CREDENTIALS' → 'OAuth client ID'\n"
-            f"   → Application type: 'Desktop app'\n"
-            f"   → Click 'CREATE' and download JSON\n"
-            f"   → Save as 'gmail_credentials.json' in this directory\n\n"
-            f"2. ENABLE GMAIL API:\n"
-            f"   → https://console.cloud.google.com/apis/library/gmail.googleapis.com\n"
-            f"   → Click 'ENABLE'\n\n"
-            f"3. ADD TEST USER:\n"
-            f"   → https://console.cloud.google.com/apis/credentials/consent\n"
-            f"   → Under 'Test users', click '+ ADD USERS'\n"
-            f"   → Add your Gmail address\n\n"
-            f"4. RUN OAUTH FLOW:\n"
-            f"   → Run this Python code:\n\n"
-            f"     from google_auth_oauthlib.flow import InstalledAppFlow\n"
-            f"     flow = InstalledAppFlow.from_client_secrets_file(\n"
-            f"         'gmail_credentials.json',\n"
-            f"         ['https://mail.google.com/']\n"
-            f"     )\n"
-            f"     creds = flow.run_local_server(port=0)\n"
-            f"     with open('{token_file}', 'w') as f:\n"
-            f"         f.write(creds.to_json())\n\n"
-            f"   → A browser will open for authorization\n"
-            f"   → Click 'Continue' or 'Advanced' → 'Go to [app] (unsafe)'\n"
-            f"   → Authorize access\n\n"
-            f"Once {token_file} is created, this function will work persistently.\n\n"
-            f"{'='*80}\n"
+            get_no_token_error_message(token_file)
         )
     
     # Load credentials
@@ -158,10 +169,10 @@ def get_gmail_messages(since_date: datetime, max_messages: int = 100, token_file
     
     return messages
 
-
+# endregion main
+# region testing
 if __name__ == "__main__":
     from datetime import timedelta
-    import json
     
     # Enable debug logging
     logging.basicConfig(
@@ -191,3 +202,5 @@ if __name__ == "__main__":
         print(str(e))
     except Exception as e:
         print(f"Error: {e}")
+
+# endregion
