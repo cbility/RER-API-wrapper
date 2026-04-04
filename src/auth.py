@@ -15,7 +15,7 @@ from time import sleep # for waiting for MFA code
 import datetime # for handling timestamps
 import re # for extracting MFA code from email body
 
-from gmail import get_gmail_messages # function to retrieve Gmail messages using Gmail API
+from src.gmail import get_gmail_messages # function to retrieve Gmail messages using Gmail API
 
 # endregion imports
 
@@ -74,6 +74,11 @@ def retrieve_mfa_code(button_clicked_after: datetime.datetime, max_retries = 5, 
         continue
     raise TimeoutError(f"Failed to retrieve MFA code after {max_retries} attempts.")
 
+def save_cookies(cookies, cookies_file="rer_cookies.json"):
+    """Save cookies to a file."""
+    with open(cookies_file, "w") as f:
+        json.dump(cookies, f, indent=2)
+    log.debug(f"Cookies saved to {cookies_file}")
 
 def load_cookies(cookies_file="rer_cookies.json"):
     """Load saved cookies."""
@@ -148,14 +153,12 @@ def authenticate_rer(email: str | None, password: str | None, cookies_file="rer_
         page.wait_for_url("https://rer.ofgem.gov.uk/**", timeout=300000)
         log.info("Authentication successful!")
 
-        # Save cookies
+        # Save cookies and headers
         cookies = page.context.cookies()
-        with open(cookies_file, "w") as f:
-            json.dump(cookies, f, indent=2)
-        log.debug(f"Cookies saved to {cookies_file}")
+        headers = page.request.headers() # TODO: check if these are the right headers to save - may need to capture them during the login flow
 
         browser.close()
-        return cookies
+        return cookies, headers
 
 # endrregion main
 
@@ -169,16 +172,19 @@ if __name__ == "__main__":
 
     if not cookies:
         log.info("No cookies found, authenticating...")
-        cookies = authenticate_rer()
+        cookies, headers = authenticate_rer()
     else:
         log.info("Using saved cookies")
+
+    save_cookies(cookies) 
 
     cookie_dict = cookies_to_dict(cookies)
     log.info(f"\nReady: {len(cookie_dict)} cookies loaded")
 
     # create session
-    session = requests.Session()
+    session = requests.Session() # TODO: figure out how to reconstruct browser session
     session.cookies.update(cookie_dict)
+    session.headers.update(headers) # TODO: check if these are the right headers to include in session
 
     # test session
     user_details = session.get("https://rer.ofgem.gov.uk/User")  # Test authenticated request
