@@ -3,19 +3,13 @@
 from dotenv import load_dotenv # for loading environment variables from .env file
 import os # for retrieving environment variables
 import logging # for logging
+import datetime # for handling timestamps
 
 import requests # lighttweight web requests
 
 from bs4 import BeautifulSoup # for parsing HTML
 
 import json # for saving cookies
-
-import base64 # for decoding email body
-from time import sleep # for waiting for MFA code
-import datetime # for handling timestamps
-import re # for extracting MFA code from email body
-
-from gmail import get_gmail_messages # function to retrieve Gmail messages using Gmail API
 
 # endregion imports
 
@@ -42,6 +36,7 @@ RER_DEFAULT_HEADERS = {
 def _browser_authenticate_rer(email: str, password: str) -> dict:
     """Authenticate with RER portal using Azure AD B2C."""
     from playwright.sync_api import sync_playwright # browser automation
+    from time import sleep # for waiting for MFA code
 
     log.info(f"Authenticating with RER portal as {email}...")
 
@@ -100,6 +95,12 @@ def _browser_authenticate_rer(email: str, password: str) -> dict:
 
 def _retrieve_mfa_code(button_clicked_after: datetime.datetime, max_retries = 5, wait_between_retries=10) -> str:
     """Extracts MFA code from email sent to energy.source.notifications@gmail.com."""
+
+    import base64 # for decoding email body
+    from time import sleep # for waiting for MFA code
+    
+    import re # for extracting MFA code from email body
+    from gmail import get_gmail_messages
 
     for retry_number in range(max_retries):
         log.debug(f"Attempting to retrieve MFA code (try {retry_number + 1}/{max_retries})...")
@@ -221,13 +222,6 @@ class RER_wrapper:
             log.error(f"Unexpected response when retrieving user email: {response.status_code} - {response.text}")
             raise Exception(f"Could not retrieve user email: {response.status_code}")
 # endregion class
-
-
-# region helpers
-
-
-# endregion helpers
-
 
 # region testing
 
