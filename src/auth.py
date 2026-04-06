@@ -27,6 +27,17 @@ load_dotenv()
 # configure logging
 log = logging.getLogger(__name__)
 
+RER_HEADERS = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-GB,en;q=0.9",
+        "Upgrade-Insecure-Requests": "1",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+    }
+
 # endregion config
 
 # region helpers
@@ -96,7 +107,7 @@ def cookies_to_dict(cookies):
 
 # region main
 
-def authenticate_rer(email: str | None = None, password: str | None = None, cookies_file="../rer_cookies.json"):
+def authenticate_rer(email: str | None = None, password: str | None = None):
     """Authenticate with RER portal using Azure AD B2C."""
     email = email or os.getenv("RER_EMAIL")
     password = password or os.getenv("RER_PASSWORD")
@@ -151,12 +162,11 @@ def authenticate_rer(email: str | None = None, password: str | None = None, cook
         page.wait_for_url("https://rer.ofgem.gov.uk/**", timeout=300000)
         log.info("Authentication successful!")
 
-        # Save cookies and headers
+        # Save cookies
         cookies = page.context.cookies()
-        headers = {}  # TODO: capture headers from login flow network interception
 
         browser.close()
-        return cookies, headers
+        return cookies
 
 # endregion main
 
@@ -166,28 +176,27 @@ if __name__ == "__main__":
 
     logging.basicConfig(level=logging.DEBUG) # debug logging for testing
 
+    headers = RER_HEADERS
     cookies = load_cookies()
 
     if not cookies:
         log.info("No cookies found, authenticating...")
-        cookies, headers = authenticate_rer()
-    else:
-        log.info("Using saved cookies")
-
-    save_cookies(cookies) 
+        cookies = authenticate_rer()
+        save_cookies(cookies)
 
     cookie_dict = cookies_to_dict(cookies)
-    log.info(f"\nReady: {len(cookie_dict)} cookies loaded")
+    log.debug(f"\nReady: {len(cookie_dict)} cookies loaded")
 
     # create session
-    session = requests.Session() # TODO: figure out how to reconstruct browser session
+    session = requests.Session()
     session.cookies.update(cookie_dict)
-    session.headers.update(headers) # TODO: check if these are the right headers to include in session
+    session.headers.update(headers)
 
     # test session
     user_details = session.get("https://rer.ofgem.gov.uk/User")  # Test authenticated request
-    log.info(f"User details response: {user_details.status_code} - {user_details.text[:100]}...")
-    log.info(user_details.text)
+    log.info(f"User details response: {user_details.status_code} (final URL: {user_details.url})")
+    log.debug(user_details.text[:5000])
+
 
 # endregion testing
 
