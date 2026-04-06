@@ -8,6 +8,12 @@ gmail_token.json
 # Environment variables
 .env
 
+# html files (contain client information)
+*.html
+
+# html exploration
+inspect_*
+
 # Python
 __pycache__/
 *.py[cod]

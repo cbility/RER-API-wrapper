@@ -11,7 +11,86 @@ from bs4 import BeautifulSoup # for parsing HTML
 
 import json # for saving cookies
 
+from typing import TypedDict, Optional
+
 # endregion imports
+
+# region types
+
+class OrganisationSummary(TypedDict):
+    organisation_id: str
+    name: str
+    type: str
+    task_count: int
+    status: str
+    user_status: str
+
+class UserDashboard(TypedDict):
+    email: str
+    full_name: str
+    outstanding_tasks: int
+    active_organisations: int
+    organisations: list[OrganisationSummary]
+
+class ActivityItem(TypedDict):
+    title: str
+    by: str
+    datetime_iso: str
+    datetime_display: str
+    description: str
+
+class UserActivity(TypedDict):
+    items: list[ActivityItem]
+
+class OwnershipSection(TypedDict):
+    heading: str
+    content: str
+
+class UserOwnership(TypedDict):
+    sections: list[OwnershipSection]
+
+class NotificationCategory(TypedDict):
+    category: str
+    manage_url: str
+
+class UserNotifications(TypedDict):
+    categories: list[NotificationCategory]
+
+class OrganisationTaskSummary(TypedDict):
+    task_name: str
+    task_count: int
+
+class OrganisationTab(TypedDict):
+    name: str
+    url: str
+
+class OrganisationDetail(TypedDict):
+    organisation_id: str
+    name: str
+    task_summary: list[OrganisationTaskSummary]
+    tabs: list[OrganisationTab]
+
+class OutputDataTask(TypedDict):
+    task_id: str
+    period: str
+    station_name: str
+    status: str
+    url: str
+
+class OutputDataTaskList(TypedDict):
+    organisation_id: str
+    tasks: list[OutputDataTask]
+
+class StationDeclarationTask(TypedDict):
+    declaration_type: str
+    year: str
+    url: str
+
+class StationDeclarationTaskList(TypedDict):
+    organisation_id: str
+    tasks: list[StationDeclarationTask]
+
+# endregion types
 
 # region config
 
@@ -144,6 +223,250 @@ def _retrieve_mfa_code(button_clicked_after: datetime.datetime, max_retries = 5,
 
 # endregion helpers
 
+# region parsers
+
+def _parse_user_dashboard(html: str) -> UserDashboard:
+    soup = BeautifulSoup(html, 'html.parser')
+
+    h1 = soup.find("h1", class_="govuk-heading-xl")
+    caption = h1.find("span", class_="govuk-caption-l")
+    caption_text = caption.get_text(strip=True)  # "User, email@example.com"
+    email = caption_text.split(",")[-1].strip()
+    # Full name is the remaining text in h1 after removing the caption and action links
+    caption.extract()
+    # strip action links
+    for a in h1.find_all("a"):
+        a.extract()
+    for span in h1.find_all("span"):
+        span.extract()
+    full_name = h1.get_text(separator=" ", strip=True)
+
+    # Stats
+    stat_row = soup.find(class_="ofgem-rer-stat__row")
+    outstanding_tasks = 0
+    active_organisations = 0
+    if stat_row:
+        items = stat_row.find_all(class_="ofgem-rer-stat__item")
+        for item in items:
+            parts = item.get_text(separator="|", strip=True).split("|")
+            if len(parts) == 2:
+                count_str, label = parts[0], parts[1].lower()
+                try:
+                    count = int(count_str.replace(",", ""))
+                except ValueError:
+                    count = 0
+                if "task" in label:
+                    outstanding_tasks = count
+                elif "organisation" in label:
+                    active_organisations = count
+
+    # Organisations table
+    organisations: list[OrganisationSummary] = []
+    table = soup.find("table")
+    if table:
+        for row in table.find_all("tr")[1:]:
+            cells = row.find_all("td")
+            if not cells:
+                continue
+            org_link = cells[0].find("a")
+            org_id = ""
+            if org_link and org_link.get("href"):
+                href = org_link["href"]
+                org_id = href.split("/Organisations/")[-1].split("/")[0]
+            organisations.append(OrganisationSummary(
+                organisation_id=org_id,
+                name=cells[0].get_text(strip=True),
+                type=cells[1].get_text(strip=True),
+                task_count=int(cells[2].get_text(strip=True) or 0),
+                status=cells[3].get_text(strip=True),
+                user_status=cells[4].get_text(strip=True),
+            ))
+
+    return UserDashboard(
+        email=email,
+        full_name=full_name,
+        outstanding_tasks=outstanding_tasks,
+        active_organisations=active_organisations,
+        organisations=organisations,
+    )
+
+
+def _parse_user_activity(html: str) -> UserActivity:
+    soup = BeautifulSoup(html, 'html.parser')
+    items: list[ActivityItem] = []
+
+    timeline = soup.find(class_="moj-timeline")
+    if not timeline:
+        return UserActivity(items=items)
+
+    for item_el in timeline.find_all(class_="moj-timeline__item"):
+        title_el = item_el.find(class_="moj-timeline__title")
+        byline_el = item_el.find(class_="moj-timeline__byline")
+
+        # Extract title text without the embedded byline
+        if title_el and byline_el:
+            byline_el.extract()
+            title = title_el.get_text(strip=True)
+            by = byline_el.get_text(separator=" ", strip=True).removeprefix("by").strip()
+        else:
+            title = title_el.get_text(strip=True) if title_el else ""
+            by = ""
+
+        time_el = item_el.find("time")
+        datetime_iso = time_el.get("datetime", "") if time_el else ""
+        datetime_display = time_el.get_text(strip=True) if time_el else ""
+
+        # Description: use summary text if available, otherwise plain text
+        desc_el = item_el.find(class_="moj-timeline__description")
+        description = ""
+        if desc_el:
+            summary = desc_el.find(class_="govuk-details__summary-text")
+            if summary:
+                description = summary.get_text(strip=True)
+            else:
+                description = desc_el.get_text(separator=" ", strip=True)
+
+        items.append(ActivityItem(
+            title=title,
+            by=by,
+            datetime_iso=datetime_iso,
+            datetime_display=datetime_display,
+            description=description,
+        ))
+
+    return UserActivity(items=items)
+
+
+def _parse_user_ownership(html: str) -> UserOwnership:
+    soup = BeautifulSoup(html, 'html.parser')
+    sections: list[OwnershipSection] = []
+
+    for h2 in soup.find_all('h2'):
+        heading = h2.get_text(strip=True)
+        # Collect content from siblings until the next h2
+        content_parts: list[str] = []
+        sib = h2.find_next_sibling()
+        while sib and sib.name != 'h2':
+            if hasattr(sib, 'get_text'):
+                text = sib.get_text(separator=" ", strip=True)
+                if text:
+                    content_parts.append(text)
+            sib = sib.find_next_sibling()
+        # Exclude footer/nav sections
+        if heading.lower() in ("support links",):
+            continue
+        sections.append(OwnershipSection(heading=heading, content=" ".join(content_parts)))
+
+    return UserOwnership(sections=sections)
+
+
+def _parse_user_notifications(html: str) -> UserNotifications:
+    soup = BeautifulSoup(html, 'html.parser')
+    categories: list[NotificationCategory] = []
+
+    table = soup.find("table")
+    if table:
+        for row in table.find_all("tr")[1:]:
+            cells = row.find_all("td")
+            if len(cells) < 2:
+                continue
+            category = cells[0].get_text(strip=True)
+            link = cells[1].find("a")
+            manage_url = link.get("href", "") if link else ""
+            categories.append(NotificationCategory(category=category, manage_url=manage_url))
+
+    return UserNotifications(categories=categories)
+
+
+def _parse_organisation(html: str) -> OrganisationDetail:
+    soup = BeautifulSoup(html, 'html.parser')
+
+    h1 = soup.find("h1", class_="govuk-heading-xl")
+    caption = h1.find("span", class_="govuk-caption-l") if h1 else None
+    org_id = ""
+    if caption:
+        caption_text = caption.get_text(strip=True)  # "Organisation, GEN0000000"
+        org_id = caption_text.split(",")[-1].strip()
+        caption.extract()
+    name = h1.get_text(strip=True) if h1 else ""
+
+    # Task summary table
+    task_summary: list[OrganisationTaskSummary] = []
+    table = soup.find("table")
+    if table:
+        for row in table.find_all("tr")[1:]:
+            cells = row.find_all("td")
+            if len(cells) >= 2:
+                task_name = cells[0].get_text(strip=True)
+                try:
+                    task_count = int(cells[1].get_text(strip=True))
+                except ValueError:
+                    task_count = 0
+                task_summary.append(OrganisationTaskSummary(task_name=task_name, task_count=task_count))
+
+    # Tab navigation
+    tabs: list[OrganisationTab] = []
+    tab_nav = soup.find(class_="moj-sub-navigation")
+    if tab_nav:
+        for a in tab_nav.find_all("a"):
+            tabs.append(OrganisationTab(name=a.get_text(strip=True), url=a.get("href", "")))
+
+    return OrganisationDetail(organisation_id=org_id, name=name, task_summary=task_summary, tabs=tabs)
+
+
+def _parse_output_data_tasks(html: str, organisation_id: str) -> OutputDataTaskList:
+    soup = BeautifulSoup(html, 'html.parser')
+    tasks: list[OutputDataTask] = []
+
+    table = soup.find("table")
+    if table:
+        for row in table.find_all("tr")[1:]:
+            cells = row.find_all("td")
+            if len(cells) < 4:
+                continue
+            period_cell = cells[0]
+            link = period_cell.find("a")
+            url = link.get("href", "") if link else ""
+            # Extract task ID: /Output/{uuid}/...
+            task_id = ""
+            url_parts = url.split("/")
+            output_idx = next((i for i, p in enumerate(url_parts) if p == "Output"), None)
+            if output_idx is not None and output_idx + 1 < len(url_parts):
+                task_id = url_parts[output_idx + 1].split("?")[0]
+
+            tasks.append(OutputDataTask(
+                task_id=task_id,
+                period=cells[0].get_text(strip=True),
+                station_name=cells[1].get_text(strip=True),
+                status=cells[3].get_text(strip=True),
+                url=url,
+            ))
+
+    return OutputDataTaskList(organisation_id=organisation_id, tasks=tasks)
+
+
+def _parse_station_declaration_tasks(html: str, organisation_id: str) -> StationDeclarationTaskList:
+    soup = BeautifulSoup(html, 'html.parser')
+    tasks: list[StationDeclarationTask] = []
+
+    table = soup.find("table")
+    if table:
+        for row in table.find_all("tr")[1:]:
+            cells = row.find_all("td")
+            if len(cells) < 2:
+                continue
+            link = cells[0].find("a")
+            url = link.get("href", "") if link else ""
+            tasks.append(StationDeclarationTask(
+                declaration_type=cells[0].get_text(strip=True),
+                year=cells[1].get_text(strip=True),
+                url=url,
+            ))
+
+    return StationDeclarationTaskList(organisation_id=organisation_id, tasks=tasks)
+
+# endregion parsers
+
 # region class
 
 class RER_wrapper:
@@ -221,6 +544,89 @@ class RER_wrapper:
         else:
             log.error(f"Unexpected response when retrieving user email: {response.status_code} - {response.text}")
             raise Exception(f"Could not retrieve user email: {response.status_code}")
+
+    def get_user_dashboard(self, sort_field: str | None = None, sort_direction: str | None = None, page_number: int = 1) -> UserDashboard:
+        """GET /User - Returns user dashboard with stats and organisation list."""
+        params: dict = {"pageNumber": page_number}
+        if sort_field:
+            params["sortField"] = sort_field
+        if sort_direction:
+            params["sortDirection"] = sort_direction
+
+        response = self.session.get(self.base_url + "User", params=params)
+        response.raise_for_status()
+        return _parse_user_dashboard(response.text)
+
+    def get_user_activity(self, expand_activity_details: bool = False) -> UserActivity:
+        """GET /User/Activity - Returns user activity timeline."""
+        params: dict = {}
+        if expand_activity_details:
+            params["expandActivityDetails"] = "true"
+        response = self.session.get(self.base_url + "User/Activity", params=params)
+        response.raise_for_status()
+        return _parse_user_activity(response.text)
+
+    def get_user_ownership(self) -> UserOwnership:
+        """GET /User/Ownership - Returns ownership guidance sections."""
+        response = self.session.get(self.base_url + "User/Ownership")
+        response.raise_for_status()
+        return _parse_user_ownership(response.text)
+
+    def get_user_notifications(self) -> UserNotifications:
+        """GET /User/Notifications - Returns email notification categories."""
+        response = self.session.get(self.base_url + "User/Notifications")
+        response.raise_for_status()
+        return _parse_user_notifications(response.text)
+
+    def get_organisation(self, organisation_id: str) -> OrganisationDetail:
+        """GET /Organisations/{organisationId} - Returns organisation overview."""
+        response = self.session.get(self.base_url + f"Organisations/{organisation_id}")
+        response.raise_for_status()
+        return _parse_organisation(response.text)
+
+    def get_organisation_output_data(
+        self,
+        organisation_id: str,
+        statuses: list[str] | None = None,
+        sort_field: str | None = None,
+        sort_direction: str | None = None,
+        page_number: int = 1,
+    ) -> OutputDataTaskList:
+        """GET /Organisations/{organisationId}/Tasks/OutputData - Returns output data tasks."""
+        params: dict = {"pageNumber": page_number}
+        if statuses:
+            params["Statuses"] = statuses
+        if sort_field:
+            params["sortField"] = sort_field
+        if sort_direction:
+            params["sortDirection"] = sort_direction
+        response = self.session.get(
+            self.base_url + f"Organisations/{organisation_id}/Tasks/OutputData",
+            params=params,
+        )
+        response.raise_for_status()
+        return _parse_output_data_tasks(response.text, organisation_id)
+
+    def get_organisation_station_declarations(
+        self,
+        organisation_id: str,
+        sort_field: str | None = None,
+        sort_direction: str | None = None,
+        page_number: int = 1,
+    ) -> StationDeclarationTaskList:
+        """GET /Organisations/{organisationId}/Tasks/StationDeclarations - Returns station declaration tasks."""
+        params: dict = {"pageNumber": page_number}
+        if sort_field:
+            params["sortField"] = sort_field
+        if sort_direction:
+            params["sortDirection"] = sort_direction
+        response = self.session.get(
+            self.base_url + f"Organisations/{organisation_id}/Tasks/StationDeclarations",
+            params=params,
+        )
+        response.raise_for_status()
+        return _parse_station_declaration_tasks(response.text, organisation_id)
+
 # endregion class
 
 # region testing
@@ -254,7 +660,6 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG) # debug logging for testing
 
     cookies = _load_cookies()
-    cookies = None
     if cookies:
         log.debug("Loaded cookies from file")
         cookies = _cookies_to_dict(cookies)

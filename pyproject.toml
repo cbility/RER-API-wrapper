@@ -13,3 +13,8 @@ dependencies = [
     "google-api-python-client>=2.111.0",
     "beautifulsoup4>=4.14.3",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+]
