@@ -104,14 +104,14 @@ class GmailMessage(TypedDict):
 
 # region main
 
-def get_gmail_messages(since_date: datetime, max_messages: int = 100, token_file: str = "gmail_token.json") -> List[GmailMessage]:
+def get_gmail_messages(since_date: datetime, max_messages: int = 100, token_file: str = "../gmail_token.json") -> List[GmailMessage]:
     """
     Retrieve Gmail messages since a specific date.
     
     Args:
         since_date: DateTime object specifying the earliest date to retrieve messages from
         max_messages: Maximum number of messages to retrieve (default: 100)
-        token_file: Path to OAuth2 token file (default: gmail_token.json)
+        token_file: Path to OAuth2 token file (default: ../gmail_token.json)
     
     Returns:
         List of raw Gmail API message objects

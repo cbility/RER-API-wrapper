@@ -15,7 +15,7 @@ from time import sleep # for waiting for MFA code
 import datetime # for handling timestamps
 import re # for extracting MFA code from email body
 
-from src.gmail import get_gmail_messages # function to retrieve Gmail messages using Gmail API
+from gmail import get_gmail_messages # function to retrieve Gmail messages using Gmail API
 
 # endregion imports
 
@@ -25,7 +25,6 @@ from src.gmail import get_gmail_messages # function to retrieve Gmail messages u
 load_dotenv()
 
 # configure logging
-logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 # endregion config
@@ -46,7 +45,7 @@ def retrieve_mfa_code(button_clicked_after: datetime.datetime, max_retries = 5, 
         ]
 
         if not messages_after_click:
-            log.warning("No emails received after button click. Retrying...")
+            log.warning(f"No emails received after button click. Retrying in {wait_between_retries} seconds...")
             sleep(wait_between_retries)
             continue
         
@@ -74,13 +73,13 @@ def retrieve_mfa_code(button_clicked_after: datetime.datetime, max_retries = 5, 
         continue
     raise TimeoutError(f"Failed to retrieve MFA code after {max_retries} attempts.")
 
-def save_cookies(cookies, cookies_file="rer_cookies.json"):
+def save_cookies(cookies, cookies_file="../rer_cookies.json"):
     """Save cookies to a file."""
     with open(cookies_file, "w") as f:
         json.dump(cookies, f, indent=2)
     log.debug(f"Cookies saved to {cookies_file}")
 
-def load_cookies(cookies_file="rer_cookies.json"):
+def load_cookies(cookies_file="../rer_cookies.json"):
     """Load saved cookies."""
     try:
         with open(cookies_file) as f:
@@ -97,7 +96,7 @@ def cookies_to_dict(cookies):
 
 # region main
 
-def authenticate_rer(email: str | None, password: str | None, cookies_file="rer_cookies.json"):
+def authenticate_rer(email: str | None = None, password: str | None = None, cookies_file="../rer_cookies.json"):
     """Authenticate with RER portal using Azure AD B2C."""
     email = email or os.getenv("RER_EMAIL")
     password = password or os.getenv("RER_PASSWORD")
@@ -108,6 +107,7 @@ def authenticate_rer(email: str | None, password: str | None, cookies_file="rer_
     log.info(f"Authenticating with RER portal as {email}...")
 
     with sync_playwright() as p:
+        log.debug("Launching browser...")
         browser = p.chromium.launch(headless=False) # TODO: set true
         page = browser.new_page()
 
@@ -147,20 +147,18 @@ def authenticate_rer(email: str | None, password: str | None, cookies_file="rer_
             if error_text.strip():  # Only raise if there's actual error text
                 log.error(f"MFA verification error element: {error_text}")
                 raise ValueError(f"MFA verification failed: {error_text}")
-            else:
-                log.debug("Found error element but it's empty - assuming success")
 
         page.wait_for_url("https://rer.ofgem.gov.uk/**", timeout=300000)
         log.info("Authentication successful!")
 
         # Save cookies and headers
         cookies = page.context.cookies()
-        headers = page.request.headers() # TODO: check if these are the right headers to save - may need to capture them during the login flow
+        headers = {}  # TODO: capture headers from login flow network interception
 
         browser.close()
         return cookies, headers
 
-# endrregion main
+# endregion main
 
 # region testing
 
