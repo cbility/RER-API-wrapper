@@ -69,6 +69,11 @@ def test_tabs_is_nonempty_list(organisation):
     assert len(organisation["tabs"]) > 0
 
 
+def test_print_raw(organisation):
+    import json
+    print(json.dumps(organisation, indent=2))
+
+
 def test_tabs_include_overview(organisation):
     tab_names = [t["name"] for t in organisation["tabs"]]
     assert "Overview" in tab_names

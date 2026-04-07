@@ -66,6 +66,11 @@ def test_organisations_nonempty(dashboard):
     assert len(dashboard["organisations"]) > 0
 
 
+def test_print_raw(dashboard):
+    import json
+    print(json.dumps(dashboard, indent=2))
+
+
 def test_each_organisation_has_required_fields(dashboard):
     for org in dashboard["organisations"]:
         assert isinstance(org["organisation_id"], str)

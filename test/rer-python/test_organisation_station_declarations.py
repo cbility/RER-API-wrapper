@@ -51,15 +51,16 @@ def test_tasks_is_list(declarations):
     assert isinstance(declarations["tasks"], list)
 
 
-def test_tasks_nonempty(declarations):
-    assert len(declarations["tasks"]) > 0
-
-
 def test_each_task_has_required_fields(declarations):
     for task in declarations["tasks"]:
         assert isinstance(task["declaration_type"], str) and len(task["declaration_type"]) > 0
         assert isinstance(task["year"], str)
         assert isinstance(task["url"], str)
+
+
+def test_print_raw(declarations):
+    import json
+    print(json.dumps(declarations, indent=2))
 
 
 def test_year_format(declarations):

@@ -64,6 +64,11 @@ def test_each_task_has_required_fields(output_data):
         assert isinstance(task["url"], str) and len(task["url"]) > 0
 
 
+def test_print_raw(output_data):
+    import json
+    print(json.dumps(output_data, indent=2))
+
+
 def test_task_ids_are_uuids(output_data):
     for task in output_data["tasks"]:
         assert UUID_RE.match(task["task_id"]), f"Not a UUID: {task['task_id']}"

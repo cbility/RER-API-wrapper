@@ -59,6 +59,11 @@ def test_datetime_iso_is_valid_format(activity):
             assert iso_pattern.match(item["datetime_iso"]), f"Invalid ISO datetime: {item['datetime_iso']}"
 
 
+def test_print_raw(activity):
+    import json
+    print(json.dumps(activity, indent=2))
+
+
 def test_title_does_not_contain_raw_byline(activity):
     for item in activity["items"]:
         assert not item["title"].startswith("by "), f"Title starts with 'by': {item['title']}"

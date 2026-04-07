@@ -48,6 +48,11 @@ def test_each_category_has_required_fields(notifications):
         assert isinstance(cat["manage_url"], str) and len(cat["manage_url"]) > 0
 
 
+def test_print_raw(notifications):
+    import json
+    print(json.dumps(notifications, indent=2))
+
+
 def test_manage_urls_contain_notifications_path(notifications):
     for cat in notifications["categories"]:
         assert "/Notifications/" in cat["manage_url"], f"Unexpected URL: {cat['manage_url']}"

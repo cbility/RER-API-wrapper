@@ -48,6 +48,11 @@ def test_each_section_has_heading_and_content(ownership):
         assert isinstance(section["content"], str)
 
 
+def test_print_raw(ownership):
+    import json
+    print(json.dumps(ownership, indent=2))
+
+
 def test_contains_ownership_section(ownership):
     headings = [s["heading"] for s in ownership["sections"]]
     assert any("ownership" in h.lower() for h in headings)
