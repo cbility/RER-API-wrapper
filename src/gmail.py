@@ -15,10 +15,10 @@ from googleapiclient.discovery import build
 
 logger = logging.getLogger(__name__)
 
-def get_no_token_error_message(token_file: str) -> str:
+def get_no_token_error_message(token_file_path: str) -> str:
     return f"""
             {'='*80}"
-            ERROR: {token_file} not found!"
+            ERROR: {token_file_path} not found!"
             {'='*80}"
             Gmail API requires OAuth2 authentication. Follow these steps:"
             1. CREATE OAUTH2 CREDENTIALS:"
@@ -42,12 +42,12 @@ def get_no_token_error_message(token_file: str) -> str:
                      ['https://mail.google.com/']"
                  )"
                  creds = flow.run_local_server(port=0)"
-                 with open('{token_file}', 'w') as f:"
+                 with open('{token_file_path}', 'w') as f:"
                      f.write(creds.to_json())"
                → A browser will open for authorization"
                → Click 'Continue' or 'Advanced' → 'Go to [app] (unsafe)'"
                → Authorize access"
-            Once {token_file} is created, this function will work persistently."
+            Once {token_file_path} is created, this function will work persistently."
             {'='*80}"
             """
 # endregion config
@@ -120,19 +120,20 @@ def get_gmail_messages(since_date: datetime, max_messages: int = 100, token_file
     Setup:
         If gmail_token.json doesn't exist, run: python setup_gmail_oauth.py
     """
+    token_file_path = os.path.join(os.path.dirname(__file__), token_file)
     # Check token file exists
-    if not os.path.exists(token_file):
+    if not os.path.exists(token_file_path):
         raise FileNotFoundError(
-            get_no_token_error_message(token_file)
+            get_no_token_error_message(token_file_path)
         )
     
     # Load credentials
-    creds = Credentials.from_authorized_user_file(token_file, ['https://mail.google.com/'])
+    creds = Credentials.from_authorized_user_file(token_file_path, ['https://mail.google.com/'])
     
     # Refresh if expired
     if creds.expired and creds.refresh_token:
         creds.refresh(Request())
-        with open(token_file, 'w') as token:
+        with open(token_file_path, 'w') as token:
             token.write(creds.to_json())
     
     # Build Gmail API service
@@ -157,7 +158,7 @@ def get_gmail_messages(since_date: datetime, max_messages: int = 100, token_file
     
     # Log received times at debug level
     if logger.isEnabledFor(logging.DEBUG):
-        logger.debug(f"Message received times:")
+        logger.debug("Message received times:")
         for idx, msg in enumerate(messages, 1):
             internal_date = msg.get('internalDate', 'Unknown')
             # internalDate is epoch milliseconds
