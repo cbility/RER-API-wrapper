@@ -90,6 +90,42 @@ class StationDeclarationTaskList(TypedDict):
     organisation_id: str
     tasks: list[StationDeclarationTask]
 
+class CertificateTypeSummary(TypedDict):
+    cert_type: str
+    issued: int
+    balance: Optional[int]
+    breakdown_url: str
+    history_url: str
+
+class CertificatesOverview(TypedDict):
+    organisation_id: str
+    balance_period: str
+    summaries: list[CertificateTypeSummary]
+
+class CertificateBreakdownItem(TypedDict):
+    action: str
+    country: str
+    station: str
+    technology: str
+    output_period: str
+    count: int
+
+class CertificateBreakdown(TypedDict):
+    organisation_id: str
+    cert_type: str
+    items: list[CertificateBreakdownItem]
+
+class CertificateHistoryMonth(TypedDict):
+    month: str
+    month_url: str
+    transferred_in: int
+    transferred_out: int
+
+class CertificateHistory(TypedDict):
+    organisation_id: str
+    cert_type: str
+    months: list[CertificateHistoryMonth]
+
 # endregion types
 
 # region config
@@ -315,7 +351,6 @@ def _parse_organisation(html: str) -> OrganisationDetail:
 
     return OrganisationDetail(organisation_id=org_id, name=name, task_summary=task_summary, tabs=tabs)
 
-
 def _parse_output_data_tasks(html: str, organisation_id: str) -> OutputDataTaskList:
     tree = HTMLParser(html)
     tasks: list[OutputDataTask] = []
@@ -343,7 +378,6 @@ def _parse_output_data_tasks(html: str, organisation_id: str) -> OutputDataTaskL
 
     return OutputDataTaskList(organisation_id=organisation_id, tasks=tasks)
 
-
 def _parse_station_declaration_tasks(html: str, organisation_id: str) -> StationDeclarationTaskList:
     tree = HTMLParser(html)
     tasks: list[StationDeclarationTask] = []
@@ -361,6 +395,108 @@ def _parse_station_declaration_tasks(html: str, organisation_id: str) -> Station
         ))
 
     return StationDeclarationTaskList(organisation_id=organisation_id, tasks=tasks)
+
+def _parse_certificates_overview(html: str, organisation_id: str) -> CertificatesOverview:
+    tree = HTMLParser(html)
+
+    desc_el = tree.css_first(".ofgem-rer-stat__description")
+    balance_period = desc_el.text(strip=True) if desc_el else ""
+
+    summaries: list[CertificateTypeSummary] = []
+    for grid_row in tree.css(".govuk-grid-row"):
+        stat_el = grid_row.css_first(".ofgem-rer-stat__item")
+        if not stat_el:
+            continue
+
+        h2 = stat_el.css_first("h2")
+        if not h2:
+            continue
+        cert_type_label = h2.text(strip=True)  # e.g. "REGOs issued" or "ROCs issued"
+        cert_type = "REGO" if "REGO" in cert_type_label else "ROC"
+
+        # issued count: text of the strong figure after removing the h2
+        figure_el = stat_el.css_first(".ofgem-rer-stat__figure")
+        h2.decompose()
+        try:
+            issued = int(figure_el.text(strip=True).replace(",", "")) if figure_el else 0
+        except ValueError:
+            issued = 0
+
+        # balance from dl/dd if present
+        balance: Optional[int] = None
+        dd = grid_row.css_first("dd")
+        if dd:
+            try:
+                balance = int(dd.text(strip=True).replace(",", ""))
+            except ValueError:
+                balance = None
+
+        # links
+        links = grid_row.css("a.ofgem-rer-certificate-dashboard-summary__link")
+        breakdown_url = links[0].attrs.get("href", "") if len(links) > 0 else ""
+        history_url = links[1].attrs.get("href", "") if len(links) > 1 else ""
+
+        summaries.append(CertificateTypeSummary(
+            cert_type=cert_type,
+            issued=issued,
+            balance=balance,
+            breakdown_url=breakdown_url,
+            history_url=history_url,
+        ))
+
+    return CertificatesOverview(organisation_id=organisation_id, balance_period=balance_period, summaries=summaries)
+
+
+def _parse_certificate_breakdown(html: str, organisation_id: str, cert_type: str) -> CertificateBreakdown:
+    tree = HTMLParser(html)
+    items: list[CertificateBreakdownItem] = []
+
+    for row in tree.css("table tr")[1:]:
+        cells = row.css("td")
+        if len(cells) < 6:
+            continue
+        try:
+            count = int(cells[5].text(strip=True).replace(",", ""))
+        except ValueError:
+            count = 0
+        items.append(CertificateBreakdownItem(
+            action=cells[0].text(strip=True),
+            country=cells[1].text(strip=True),
+            station=cells[2].text(strip=True),
+            technology=cells[3].text(strip=True),
+            output_period=cells[4].text(strip=True),
+            count=count,
+        ))
+
+    return CertificateBreakdown(organisation_id=organisation_id, cert_type=cert_type, items=items)
+
+
+def _parse_certificate_history(html: str, organisation_id: str, cert_type: str) -> CertificateHistory:
+    tree = HTMLParser(html)
+    months: list[CertificateHistoryMonth] = []
+
+    for row in tree.css("table tr")[1:]:
+        cells = row.css("td")
+        if len(cells) < 3:
+            continue
+        month_link = cells[0].css_first("a")
+        month_url = month_link.attrs.get("href", "") if month_link else ""
+        try:
+            transferred_in = int(cells[1].text(strip=True).replace(",", ""))
+        except ValueError:
+            transferred_in = 0
+        try:
+            transferred_out = int(cells[2].text(strip=True).replace(",", ""))
+        except ValueError:
+            transferred_out = 0
+        months.append(CertificateHistoryMonth(
+            month=cells[0].text(strip=True),
+            month_url=month_url,
+            transferred_in=transferred_in,
+            transferred_out=transferred_out,
+        ))
+
+    return CertificateHistory(organisation_id=organisation_id, cert_type=cert_type, months=months)
 
 # endregion parsers
 
@@ -505,12 +641,41 @@ class RER_wrapper:
             params["sortField"] = sort_field
         if sort_direction:
             params["sortDirection"] = sort_direction
-        response = self.session.get(
-            self.base_url + f"Organisations/{organisation_id}/Tasks/StationDeclarations",
+        response = self._request(f"Organisations/{organisation_id}/Tasks/StationDeclarations", params=params)
+        return _parse_station_declaration_tasks(response.text, organisation_id)
+
+    def get_organisation_certificates(self, organisation_id: str) -> CertificatesOverview:
+        """GET /Organisations/{organisationId}/Certificates - Returns certificates overview."""
+        response = self._request(f"Organisations/{organisation_id}/Certificates")
+        return _parse_certificates_overview(response.text, organisation_id)
+
+    def get_organisation_certificates_breakdown(
+        self,
+        organisation_id: str,
+        cert_type: str,
+    ) -> CertificateBreakdown:
+        """GET /Organisations/{organisationId}/Certificates/{certType}/Breakdown - Returns certificate breakdown."""
+        response = self._request(f"Organisations/{organisation_id}/Certificates/{cert_type}/Breakdown")
+        return _parse_certificate_breakdown(response.text, organisation_id, cert_type)
+
+    def get_organisation_certificates_history(
+        self,
+        organisation_id: str,
+        cert_type: str,
+        from_date: str | None = None,
+        to_date: str | None = None,
+    ) -> CertificateHistory:
+        """GET /Organisations/{organisationId}/Certificates/{certType}/History - Returns certificate transaction history."""
+        params: dict = {}
+        if from_date:
+            params["fromDate"] = from_date
+        if to_date:
+            params["toDate"] = to_date
+        response = self._request(
+            f"Organisations/{organisation_id}/Certificates/{cert_type}/History",
             params=params,
         )
-        response.raise_for_status()
-        return _parse_station_declaration_tasks(response.text, organisation_id)
+        return _parse_certificate_history(response.text, organisation_id, cert_type)
 
 # endregion class
 
