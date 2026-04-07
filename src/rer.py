@@ -428,6 +428,19 @@ class RER_wrapper:
         log.info(f"Authenticated as {self.__user_email} using new session.")
         self.has_fresh_cookies = True
         return
+    
+    def _request(self, endpoint: str, method: str = "GET", **kwargs) -> requests.Response:
+        """Make an authenticated request to the RER portal."""
+        url = self.base_url + endpoint.lstrip("/")
+        response = self.session.request(method, url, **kwargs)
+        if response.status_code == 200:
+            return response
+        elif response.status_code == 403:
+            raise Exception(f"Authentication failed: {response.status_code}")
+        else:
+            log.error(f"Unexpected response when making request to {endpoint}: {response.status_code} - {response.text}")
+            response.raise_for_status()
+        return response
 
     def get_user_email(self) -> str:
         """Get the email address of the authenticated user."""
@@ -452,14 +465,12 @@ class RER_wrapper:
         if sort_direction:
             params["sortDirection"] = sort_direction
 
-        response = self.session.get(self.base_url + "User", params=params)
-        response.raise_for_status()
+        response = self._request("User", params=params)
         return _parse_user(response.text)
 
     def get_organisation(self, organisation_id: str) -> OrganisationDetail:
         """GET /Organisations/{organisationId} - Returns organisation overview."""
-        response = self.session.get(self.base_url + f"Organisations/{organisation_id}")
-        response.raise_for_status()
+        response = self._request(f"Organisations/{organisation_id}")
         return _parse_organisation(response.text)
 
     def get_organisation_output_data(
@@ -478,11 +489,7 @@ class RER_wrapper:
             params["sortField"] = sort_field
         if sort_direction:
             params["sortDirection"] = sort_direction
-        response = self.session.get(
-            self.base_url + f"Organisations/{organisation_id}/Tasks/OutputData",
-            params=params,
-        )
-        response.raise_for_status()
+        response = self._request(f"Organisations/{organisation_id}/Tasks/OutputData", params=params)
         return _parse_output_data_tasks(response.text, organisation_id)
 
     def get_organisation_station_declarations(
