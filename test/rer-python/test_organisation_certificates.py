@@ -2,11 +2,12 @@
 import sys
 import os
 import json
+import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 
 from dotenv import load_dotenv
-from rer import RER_wrapper, CertificatesOverview
+from rer import RER_wrapper
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
 
@@ -16,9 +17,6 @@ ORG_ID = "GEN0202802"
 
 def pytest_configure(config):
     pass
-
-
-import pytest
 
 
 @pytest.fixture(scope="module")

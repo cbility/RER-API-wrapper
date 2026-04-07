@@ -2,11 +2,13 @@
 import sys
 import os
 import json
+import pytest
+
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 
 from dotenv import load_dotenv
-from rer import RER_wrapper, CertificateHistory
+from rer import RER_wrapper
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
 
@@ -15,7 +17,6 @@ ORG_ID = "GEN0202802"
 FROM_DATE = "05/01/2024 00:00:00 +01:00"
 TO_DATE = "04/07/2026 12:14:27 +01:00"
 
-import pytest
 
 
 @pytest.fixture(scope="module")

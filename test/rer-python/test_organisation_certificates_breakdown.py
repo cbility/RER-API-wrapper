@@ -2,18 +2,19 @@
 import sys
 import os
 import json
+import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 
 from dotenv import load_dotenv
-from rer import RER_wrapper, CertificateBreakdown
+from rer import RER_wrapper
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
 
 COOKIES_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'rer_cookies.json')
 ORG_ID = "GEN0202802"
 
-import pytest
+
 
 
 @pytest.fixture(scope="module")

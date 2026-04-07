@@ -8,7 +8,7 @@ import re
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 
 from dotenv import load_dotenv
-from rer import RER_wrapper, OutputDataTaskList
+from rer import RER_wrapper
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
 
@@ -30,8 +30,7 @@ def wrapper():
 
 @pytest.fixture(scope="module")
 def first_org_id(wrapper):
-    user = wrapper.get_user()
-    return user["organisations"][0]["organisation_id"]
+    return wrapper.get_user_organisations()[0]["organisation_id"]
 
 
 @pytest.fixture(scope="module")
