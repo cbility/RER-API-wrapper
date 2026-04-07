@@ -32,29 +32,6 @@ class User(TypedDict):
     active_organisations: int
     organisations: list[OrganisationSummary]
 
-class ActivityItem(TypedDict):
-    title: str
-    by: str
-    datetime_iso: str
-    datetime_display: str
-    description: str
-
-class UserActivity(TypedDict):
-    items: list[ActivityItem]
-
-class OwnershipSection(TypedDict):
-    heading: str
-    content: str
-
-class UserOwnership(TypedDict):
-    sections: list[OwnershipSection]
-
-class NotificationCategory(TypedDict):
-    category: str
-    manage_url: str
-
-class UserNotifications(TypedDict):
-    categories: list[NotificationCategory]
 
 class OrganisationTaskSummary(TypedDict):
     task_name: str
