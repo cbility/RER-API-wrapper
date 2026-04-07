@@ -512,6 +512,7 @@ class RER_wrapper:
     session: requests.Session
     base_url="https://rer.ofgem.gov.uk/"
     __user_email: str | None = None
+    __user_full_name: str | None = None
     __user_password: str | None = None
     has_fresh_cookies: bool = False
 
@@ -546,10 +547,12 @@ class RER_wrapper:
             self.session = session
             try:
                 # test session
-                self.__user_email = self.get_user_email()
-                log.info(f"Authenticated as {self.__user_email} using stored cookies.")
+                user = self.get_user()
+                self.__user_email = user["email"]
+                self.__user_full_name = user["full_name"]
+                log.info(f"Authenticated as {self.__user_email} ({self.__user_full_name}) using stored cookies.")
                 return
-            except Exception as e:
+            except requests.exceptions.ConnectionError as e:
                 log.warning(f"Stored cookies are invalid: {e}. Re-authenticating...")
         else:
             log.debug("No stored cookies, authenticating...")
@@ -560,8 +563,10 @@ class RER_wrapper:
         session.cookies.update(cookies)
         self.session = session
 
-        self.__user_email = self.get_user_email()
-        log.info(f"Authenticated as {self.__user_email} using new session.")
+        user = self.get_user()
+        self.__user_email = user["email"]
+        self.__user_full_name = user["full_name"]
+        log.info(f"Authenticated as {self.__user_email} ({self.__user_full_name}) using new session.")
         self.has_fresh_cookies = True
         return
     
@@ -572,26 +577,11 @@ class RER_wrapper:
         if response.status_code == 200:
             return response
         elif response.status_code == 403:
-            raise Exception(f"Authentication failed: {response.status_code}")
+            raise requests.exceptions.HTTPError(f"Authentication failed: {response.status_code}")
         else:
             log.error(f"Unexpected response when making request to {endpoint}: {response.status_code} - {response.text}")
             response.raise_for_status()
         return response
-
-    def get_user_email(self) -> str:
-        """Get the email address of the authenticated user."""
-        response = self.session.get(self.base_url + "User")
-        response.raise_for_status()
-        if response.status_code == 200:
-            tree = HTMLParser(response.text)
-            caption = tree.css_first("h1.govuk-heading-xl span.govuk-caption-l")
-            email = caption.text(strip=True).split(",")[-1].strip()
-            return email
-        elif response.status_code == 403:
-            raise Exception(f"Could not retrieve user email: Invalid session: {response.status_code}")
-        else:
-            log.error(f"Unexpected response when retrieving user email: {response.status_code} - {response.text}")
-            raise Exception(f"Could not retrieve user email: {response.status_code}")
 
     def get_user(self, sort_field: str | None = None, sort_direction: str | None = None, page_number: int = 1) -> User:
         """GET /User - Returns user dashboard with stats and organisation list."""
@@ -600,7 +590,6 @@ class RER_wrapper:
             params["sortField"] = sort_field
         if sort_direction:
             params["sortDirection"] = sort_direction
-
         response = self._request("User", params=params)
         return _parse_user(response.text)
 
