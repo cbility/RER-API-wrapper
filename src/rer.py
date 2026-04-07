@@ -52,7 +52,10 @@ def _browser_authenticate_rer(email: str, password: str) -> dict:
         # Navigate and wait for Azure B2C login
         log.debug("Navigating to sign-in page...")
         page.goto("https://rer.ofgem.gov.uk/Account/SignIn")
+        log.info("Waiting for Azure B2C login page to load...")
         page.wait_for_url("**/b2c_1a_rer_signin/**")
+        log.debug("Azure B2C login page loaded.")
+
 
         # Fill login form
         log.debug("Filling credentials...")
@@ -200,7 +203,7 @@ class RER_wrapper:
                 log.info(f"Authenticated as {self.__user_email} ({self.__user_full_name}) using stored cookies.")
                 return
             except requests.exceptions.ConnectionError as e:
-                log.warning(f"Stored cookies are invalid: {e}. Re-authenticating...")
+                log.warning(f"Assuming stored cookies are invalid: {e}. Re-authenticating...")
         else:
             log.debug("No stored cookies, authenticating...")
 
@@ -224,7 +227,7 @@ class RER_wrapper:
         if response.status_code == 200:
             return response
         elif response.status_code == 403:
-            raise requests.exceptions.HTTPError(f"Authentication failed: {response.status_code}")
+            raise requests.exceptions.HTTPError(f"Request refused: {response.status_code}. This usually means the RER server is unavailable at this time.")
         else:
             log.error(f"Unexpected response when making request to {endpoint}: {response.status_code} - {response.text}")
             response.raise_for_status()
