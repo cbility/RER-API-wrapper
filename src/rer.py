@@ -7,7 +7,7 @@ import datetime # for handling timestamps
 
 import requests # lighttweight web requests
 
-from bs4 import BeautifulSoup # for parsing HTML
+from selectolax.parser import HTMLParser # for parsing HTML
 
 import json # for saving cookies
 
@@ -226,61 +226,55 @@ def _retrieve_mfa_code(button_clicked_after: datetime.datetime, max_retries = 5,
 # region parsers
 
 def _parse_user(html: str) -> User:
-    soup = BeautifulSoup(html, 'html.parser')
+    tree = HTMLParser(html)
 
-    h1 = soup.find("h1", class_="govuk-heading-xl")
-    caption = h1.find("span", class_="govuk-caption-l")
-    caption_text = caption.get_text(strip=True)  # "User, email@example.com"
-    email = caption_text.split(",")[-1].strip()
-    # Full name is the remaining text in h1 after removing the caption and action links
-    caption.extract()
-    # strip action links
-    for a in h1.find_all("a"):
-        a.extract()
-    for span in h1.find_all("span"):
-        span.extract()
-    full_name = h1.get_text(separator=" ", strip=True)
+    h1 = tree.css_first("h1.govuk-heading-xl")
+    caption = h1.css_first("span.govuk-caption-l")
+    email = caption.text(strip=True).split(",")[-1].strip()
+
+    # Remove caption, links, and spans to isolate the full name
+    caption.decompose()
+    for node in h1.css("a"):
+        node.decompose()
+    for node in h1.css("span"):
+        node.decompose()
+    full_name = h1.text(strip=True)
 
     # Stats
-    stat_row = soup.find(class_="ofgem-rer-stat__row")
     outstanding_tasks = 0
     active_organisations = 0
-    if stat_row:
-        items = stat_row.find_all(class_="ofgem-rer-stat__item")
-        for item in items:
-            parts = item.get_text(separator="|", strip=True).split("|")
-            if len(parts) == 2:
-                count_str, label = parts[0], parts[1].lower()
-                try:
-                    count = int(count_str.replace(",", ""))
-                except ValueError:
-                    count = 0
-                if "task" in label:
-                    outstanding_tasks = count
-                elif "organisation" in label:
-                    active_organisations = count
+    for item in tree.css(".ofgem-rer-stat__item"):
+        parts = item.text(separator="|", strip=True).split("|")
+        if len(parts) == 2:
+            count_str, label = parts[0], parts[1].lower()
+            try:
+                count = int(count_str.replace(",", ""))
+            except ValueError:
+                count = 0
+            if "task" in label:
+                outstanding_tasks = count
+            elif "organisation" in label:
+                active_organisations = count
 
     # Organisations table
     organisations: list[OrganisationSummary] = []
-    table = soup.find("table")
-    if table:
-        for row in table.find_all("tr")[1:]:
-            cells = row.find_all("td")
-            if not cells:
-                continue
-            org_link = cells[0].find("a")
-            org_id = ""
-            if org_link and org_link.get("href"):
-                href = org_link["href"]
-                org_id = href.split("/Organisations/")[-1].split("/")[0]
-            organisations.append(OrganisationSummary(
-                organisation_id=org_id,
-                name=cells[0].get_text(strip=True),
-                type=cells[1].get_text(strip=True),
-                task_count=int(cells[2].get_text(strip=True) or 0),
-                status=cells[3].get_text(strip=True),
-                user_status=cells[4].get_text(strip=True),
-            ))
+    for row in tree.css("table tr")[1:]:
+        cells = row.css("td")
+        if not cells:
+            continue
+        org_link = cells[0].css_first("a")
+        org_id = ""
+        if org_link:
+            href = org_link.attrs.get("href", "")
+            org_id = href.split("/Organisations/")[-1].split("/")[0]
+        organisations.append(OrganisationSummary(
+            organisation_id=org_id,
+            name=cells[0].text(strip=True),
+            type=cells[1].text(strip=True),
+            task_count=int(cells[2].text(strip=True) or 0),
+            status=cells[3].text(strip=True),
+            user_status=cells[4].text(strip=True),
+        ))
 
     return User(
         email=email,
@@ -292,39 +286,39 @@ def _parse_user(html: str) -> User:
 
 
 def _parse_user_activity(html: str) -> UserActivity:
-    soup = BeautifulSoup(html, 'html.parser')
+    tree = HTMLParser(html)
     items: list[ActivityItem] = []
 
-    timeline = soup.find(class_="moj-timeline")
+    timeline = tree.css_first(".moj-timeline")
     if not timeline:
         return UserActivity(items=items)
 
-    for item_el in timeline.find_all(class_="moj-timeline__item"):
-        title_el = item_el.find(class_="moj-timeline__title")
-        byline_el = item_el.find(class_="moj-timeline__byline")
+    for item_el in timeline.css(".moj-timeline__item"):
+        title_el = item_el.css_first(".moj-timeline__title")
+        byline_el = item_el.css_first(".moj-timeline__byline")
 
-        # Extract title text without the embedded byline
+        # Read byline before decomposing it out of the title
         if title_el and byline_el:
-            byline_el.extract()
-            title = title_el.get_text(strip=True)
-            by = byline_el.get_text(separator=" ", strip=True).removeprefix("by").strip()
+            by = byline_el.text(separator=" ", strip=True).removeprefix("by").strip()
+            byline_el.decompose()
+            title = title_el.text(strip=True)
         else:
-            title = title_el.get_text(strip=True) if title_el else ""
+            title = title_el.text(strip=True) if title_el else ""
             by = ""
 
-        time_el = item_el.find("time")
-        datetime_iso = time_el.get("datetime", "") if time_el else ""
-        datetime_display = time_el.get_text(strip=True) if time_el else ""
+        time_el = item_el.css_first("time")
+        datetime_iso = time_el.attrs.get("datetime", "") if time_el else ""
+        datetime_display = time_el.text(strip=True) if time_el else ""
 
-        # Description: use summary text if available, otherwise plain text
-        desc_el = item_el.find(class_="moj-timeline__description")
+        # Description: prefer the collapsible summary label, fall back to full text
+        desc_el = item_el.css_first(".moj-timeline__description")
         description = ""
         if desc_el:
-            summary = desc_el.find(class_="govuk-details__summary-text")
+            summary = desc_el.css_first(".govuk-details__summary-text")
             if summary:
-                description = summary.get_text(strip=True)
+                description = summary.text(strip=True)
             else:
-                description = desc_el.get_text(separator=" ", strip=True)
+                description = desc_el.text(separator=" ", strip=True)
 
         items.append(ActivityItem(
             title=title,
@@ -338,130 +332,118 @@ def _parse_user_activity(html: str) -> UserActivity:
 
 
 def _parse_user_ownership(html: str) -> UserOwnership:
-    soup = BeautifulSoup(html, 'html.parser')
+    tree = HTMLParser(html)
     sections: list[OwnershipSection] = []
 
-    for h2 in soup.find_all('h2'):
-        heading = h2.get_text(strip=True)
-        # Collect content from siblings until the next h2
-        content_parts: list[str] = []
-        sib = h2.find_next_sibling()
-        while sib and sib.name != 'h2':
-            if hasattr(sib, 'get_text'):
-                text = sib.get_text(separator=" ", strip=True)
-                if text:
-                    content_parts.append(text)
-            sib = sib.find_next_sibling()
-        # Exclude footer/nav sections
+    for h2 in tree.css("h2"):
+        heading = h2.text(strip=True)
         if heading.lower() in ("support links",):
             continue
+        # Walk siblings until the next h2
+        content_parts: list[str] = []
+        sib = h2.next
+        while sib is not None and sib.tag != "h2":
+            if sib.tag != "-text":
+                text = sib.text(strip=True)
+                if text:
+                    content_parts.append(text)
+            sib = sib.next
         sections.append(OwnershipSection(heading=heading, content=" ".join(content_parts)))
 
     return UserOwnership(sections=sections)
 
 
 def _parse_user_notifications(html: str) -> UserNotifications:
-    soup = BeautifulSoup(html, 'html.parser')
+    tree = HTMLParser(html)
     categories: list[NotificationCategory] = []
 
-    table = soup.find("table")
-    if table:
-        for row in table.find_all("tr")[1:]:
-            cells = row.find_all("td")
-            if len(cells) < 2:
-                continue
-            category = cells[0].get_text(strip=True)
-            link = cells[1].find("a")
-            manage_url = link.get("href", "") if link else ""
-            categories.append(NotificationCategory(category=category, manage_url=manage_url))
+    for row in tree.css("table tr")[1:]:
+        cells = row.css("td")
+        if len(cells) < 2:
+            continue
+        category = cells[0].text(strip=True)
+        link = cells[1].css_first("a")
+        manage_url = link.attrs.get("href", "") if link else ""
+        categories.append(NotificationCategory(category=category, manage_url=manage_url))
 
     return UserNotifications(categories=categories)
 
 
 def _parse_organisation(html: str) -> OrganisationDetail:
-    soup = BeautifulSoup(html, 'html.parser')
+    tree = HTMLParser(html)
 
-    h1 = soup.find("h1", class_="govuk-heading-xl")
-    caption = h1.find("span", class_="govuk-caption-l") if h1 else None
+    h1 = tree.css_first("h1.govuk-heading-xl")
+    caption = h1.css_first("span.govuk-caption-l") if h1 else None
     org_id = ""
     if caption:
-        caption_text = caption.get_text(strip=True)  # "Organisation, GEN0000000"
-        org_id = caption_text.split(",")[-1].strip()
-        caption.extract()
-    name = h1.get_text(strip=True) if h1 else ""
+        org_id = caption.text(strip=True).split(",")[-1].strip()
+        caption.decompose()
+    name = h1.text(strip=True) if h1 else ""
 
     # Task summary table
     task_summary: list[OrganisationTaskSummary] = []
-    table = soup.find("table")
-    if table:
-        for row in table.find_all("tr")[1:]:
-            cells = row.find_all("td")
-            if len(cells) >= 2:
-                task_name = cells[0].get_text(strip=True)
-                try:
-                    task_count = int(cells[1].get_text(strip=True))
-                except ValueError:
-                    task_count = 0
-                task_summary.append(OrganisationTaskSummary(task_name=task_name, task_count=task_count))
+    for row in tree.css("table tr")[1:]:
+        cells = row.css("td")
+        if len(cells) >= 2:
+            task_name = cells[0].text(strip=True)
+            try:
+                task_count = int(cells[1].text(strip=True))
+            except ValueError:
+                task_count = 0
+            task_summary.append(OrganisationTaskSummary(task_name=task_name, task_count=task_count))
 
     # Tab navigation
-    tabs: list[OrganisationTab] = []
-    tab_nav = soup.find(class_="moj-sub-navigation")
-    if tab_nav:
-        for a in tab_nav.find_all("a"):
-            tabs.append(OrganisationTab(name=a.get_text(strip=True), url=a.get("href", "")))
+    tabs: list[OrganisationTab] = [
+        OrganisationTab(name=a.text(strip=True), url=a.attrs.get("href", ""))
+        for a in tree.css(".moj-sub-navigation a")
+    ]
 
     return OrganisationDetail(organisation_id=org_id, name=name, task_summary=task_summary, tabs=tabs)
 
 
 def _parse_output_data_tasks(html: str, organisation_id: str) -> OutputDataTaskList:
-    soup = BeautifulSoup(html, 'html.parser')
+    tree = HTMLParser(html)
     tasks: list[OutputDataTask] = []
 
-    table = soup.find("table")
-    if table:
-        for row in table.find_all("tr")[1:]:
-            cells = row.find_all("td")
-            if len(cells) < 4:
-                continue
-            period_cell = cells[0]
-            link = period_cell.find("a")
-            url = link.get("href", "") if link else ""
-            # Extract task ID: /Output/{uuid}/...
-            task_id = ""
-            url_parts = url.split("/")
-            output_idx = next((i for i, p in enumerate(url_parts) if p == "Output"), None)
-            if output_idx is not None and output_idx + 1 < len(url_parts):
-                task_id = url_parts[output_idx + 1].split("?")[0]
+    for row in tree.css("table tr")[1:]:
+        cells = row.css("td")
+        if len(cells) < 4:
+            continue
+        link = cells[0].css_first("a")
+        url = link.attrs.get("href", "") if link else ""
+        # Extract task ID from /Output/{uuid}/...
+        task_id = ""
+        url_parts = url.split("/")
+        output_idx = next((i for i, p in enumerate(url_parts) if p == "Output"), None)
+        if output_idx is not None and output_idx + 1 < len(url_parts):
+            task_id = url_parts[output_idx + 1].split("?")[0]
 
-            tasks.append(OutputDataTask(
-                task_id=task_id,
-                period=cells[0].get_text(strip=True),
-                station_name=cells[1].get_text(strip=True),
-                status=cells[3].get_text(strip=True),
-                url=url,
-            ))
+        tasks.append(OutputDataTask(
+            task_id=task_id,
+            period=cells[0].text(strip=True),
+            station_name=cells[1].text(strip=True),
+            status=cells[3].text(strip=True),
+            url=url,
+        ))
 
     return OutputDataTaskList(organisation_id=organisation_id, tasks=tasks)
 
 
 def _parse_station_declaration_tasks(html: str, organisation_id: str) -> StationDeclarationTaskList:
-    soup = BeautifulSoup(html, 'html.parser')
+    tree = HTMLParser(html)
     tasks: list[StationDeclarationTask] = []
 
-    table = soup.find("table")
-    if table:
-        for row in table.find_all("tr")[1:]:
-            cells = row.find_all("td")
-            if len(cells) < 2:
-                continue
-            link = cells[0].find("a")
-            url = link.get("href", "") if link else ""
-            tasks.append(StationDeclarationTask(
-                declaration_type=cells[0].get_text(strip=True),
-                year=cells[1].get_text(strip=True),
-                url=url,
-            ))
+    for row in tree.css("table tr")[1:]:
+        cells = row.css("td")
+        if len(cells) < 2:
+            continue
+        link = cells[0].css_first("a")
+        url = link.attrs.get("href", "") if link else ""
+        tasks.append(StationDeclarationTask(
+            declaration_type=cells[0].text(strip=True),
+            year=cells[1].text(strip=True),
+            url=url,
+        ))
 
     return StationDeclarationTaskList(organisation_id=organisation_id, tasks=tasks)
 
@@ -537,9 +519,9 @@ class RER_wrapper:
         response = self.session.get(self.base_url + "User")
         response.raise_for_status()
         if response.status_code == 200:
-            soup = BeautifulSoup(response.text, 'html.parser')
-            h1 = soup.find("h1", class_="govuk-heading-xl")
-            email = h1.find("span", class_="govuk-caption-l").get_text(strip=True).split(",")[-1].strip()
+            tree = HTMLParser(response.text)
+            caption = tree.css_first("h1.govuk-heading-xl span.govuk-caption-l")
+            email = caption.text(strip=True).split(",")[-1].strip()
             return email
         elif response.status_code == 403:
             raise Exception(f"Could not retrieve user email: Invalid session: {response.status_code}")
