@@ -7,7 +7,7 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 
 from dotenv import load_dotenv
-from rer import RER_wrapper, OrganisationDetail
+from rer import RER_wrapper
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
 
