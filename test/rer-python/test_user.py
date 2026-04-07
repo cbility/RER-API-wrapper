@@ -7,7 +7,7 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 
 from dotenv import load_dotenv
-from rer import RER_wrapper, User, OrganisationSummary
+from rer import RER_wrapper
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
 
@@ -52,25 +52,6 @@ def test_outstanding_tasks_is_non_negative_int(user):
     assert isinstance(user["outstanding_tasks"], int)
     assert user["outstanding_tasks"] >= 0
 
-def test_organisations_is_list(user):
-    assert isinstance(user["organisations"], list)
-
-
-def test_organisations_nonempty(user):
-    assert len(user["organisations"]) > 0
-
-
 def test_print_raw(user):
     import json
     print(json.dumps(user, indent=2))
-
-
-def test_each_organisation_has_required_fields(user):
-    for org in user["organisations"]:
-        assert isinstance(org["organisation_id"], str)
-        assert org["organisation_id"].startswith("GEN")
-        assert isinstance(org["name"], str) and len(org["name"]) > 0
-        assert isinstance(org["type"], str) and len(org["type"]) > 0
-        assert isinstance(org["task_count"], int) and org["task_count"] >= 0
-        assert isinstance(org["status"], str) and len(org["status"]) > 0
-        assert isinstance(org["user_status"], str) and len(org["user_status"]) > 0

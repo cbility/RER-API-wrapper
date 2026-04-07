@@ -10,8 +10,10 @@ import requests # lighttweight web requests
 from selectolax.parser import HTMLParser # for parsing HTML
 
 import json # for saving cookies
+import re # for pagination parsing
+import math # for pagination calculation
 
-from typing import TypedDict, Optional
+import rer_html as rer_html
 
 # endregion imports
 
@@ -143,7 +145,6 @@ def _retrieve_mfa_code(button_clicked_after: datetime.datetime, max_retries = 5,
         continue
     raise TimeoutError(f"Failed to retrieve MFA code after {max_retries} attempts.")
 
-
 # endregion helpers
 
 # region class
@@ -229,20 +230,48 @@ class RER_wrapper:
             response.raise_for_status()
         return response
 
-    def get_user(self, sort_field: str | None = None, sort_direction: str | None = None, page_number: int = 1) -> User:
+    def get_user(self) -> rer_html.User:
         """GET /User - Returns user dashboard with stats and organisation list."""
-        params: dict = {"pageNumber": page_number}
+        response = self._request("User")
+        return rer_html._parse_user(response.text)
+
+    def get_user_organisations(
+        self,
+        sort_field: str | None = None,
+        sort_direction: str | None = None,
+    ) -> list[rer_html.OrganisationSummary]:
+        """GET /User - Returns all organisations for the authenticated user across all pages."""
+        params: dict = {"pageNumber": 1}
         if sort_field:
             params["sortField"] = sort_field
         if sort_direction:
             params["sortDirection"] = sort_direction
-        response = self._request("User", params=params)
-        return _parse_user(response.text)
 
-    def get_organisation(self, organisation_id: str) -> OrganisationDetail:
+        response = self._request("User", params=params)
+        first_html = response.text
+
+        # Determine total pages from pagination results summary
+        tree = HTMLParser(first_html)
+        total_pages = 1
+        results_el = tree.css_first(".moj-pagination__results")
+        if results_el:
+            m = re.search(r'Showing\s+(\d+)\s+to\s+(\d+)\s+of\s+(\d+)', results_el.text(strip=True))
+            if m:
+                start, end, total = int(m.group(1)), int(m.group(2)), int(m.group(3))
+                page_size = end - start + 1
+                total_pages = math.ceil(total / page_size)
+
+        pages = [first_html]
+        for page_num in range(2, total_pages + 1):
+            params["pageNumber"] = page_num
+            pages.append(self._request("User", params=params).text)
+
+        return rer_html._parse_user_organisations(pages)
+
+    def get_organisation(self, organisation_id: str) -> rer_html.OrganisationDetail:
         """GET /Organisations/{organisationId} - Returns organisation overview."""
         response = self._request(f"Organisations/{organisation_id}")
-        return _parse_organisation(response.text)
+        return rer_html._parse_organisation(response.text)
 
     def get_organisation_output_data(
         self,
@@ -251,7 +280,7 @@ class RER_wrapper:
         sort_field: str | None = None,
         sort_direction: str | None = None,
         page_number: int = 1,
-    ) -> OutputDataTaskList:
+    ) -> rer_html.OutputDataTaskList:
         """GET /Organisations/{organisationId}/Tasks/OutputData - Returns output data tasks."""
         params: dict = {"pageNumber": page_number}
         if statuses:
@@ -261,7 +290,7 @@ class RER_wrapper:
         if sort_direction:
             params["sortDirection"] = sort_direction
         response = self._request(f"Organisations/{organisation_id}/Tasks/OutputData", params=params)
-        return _parse_output_data_tasks(response.text, organisation_id)
+        return rer_html._parse_output_data_tasks(response.text, organisation_id)
 
     def get_organisation_station_declarations(
         self,
@@ -269,7 +298,7 @@ class RER_wrapper:
         sort_field: str | None = None,
         sort_direction: str | None = None,
         page_number: int = 1,
-    ) -> StationDeclarationTaskList:
+    ) -> rer_html.StationDeclarationTaskList:
         """GET /Organisations/{organisationId}/Tasks/StationDeclarations - Returns station declaration tasks."""
         params: dict = {"pageNumber": page_number}
         if sort_field:
@@ -277,21 +306,21 @@ class RER_wrapper:
         if sort_direction:
             params["sortDirection"] = sort_direction
         response = self._request(f"Organisations/{organisation_id}/Tasks/StationDeclarations", params=params)
-        return _parse_station_declaration_tasks(response.text, organisation_id)
+        return rer_html._parse_station_declaration_tasks(response.text, organisation_id)
 
-    def get_organisation_certificates(self, organisation_id: str) -> CertificatesOverview:
+    def get_organisation_certificates(self, organisation_id: str) -> rer_html.CertificatesOverview:
         """GET /Organisations/{organisationId}/Certificates - Returns certificates overview."""
         response = self._request(f"Organisations/{organisation_id}/Certificates")
-        return _parse_certificates_overview(response.text, organisation_id)
+        return rer_html._parse_certificates_overview(response.text, organisation_id)
 
     def get_organisation_certificates_breakdown(
         self,
         organisation_id: str,
         cert_type: str,
-    ) -> CertificateBreakdown:
+    ) -> rer_html.CertificateBreakdown:
         """GET /Organisations/{organisationId}/Certificates/{certType}/Breakdown - Returns certificate breakdown."""
         response = self._request(f"Organisations/{organisation_id}/Certificates/{cert_type}/Breakdown")
-        return _parse_certificate_breakdown(response.text, organisation_id, cert_type)
+        return rer_html._parse_certificate_breakdown(response.text, organisation_id, cert_type)
 
     def get_organisation_certificates_history(
         self,
@@ -299,7 +328,7 @@ class RER_wrapper:
         cert_type: str,
         from_date: str | None = None,
         to_date: str | None = None,
-    ) -> CertificateHistory:
+    ) -> rer_html.CertificateHistory:
         """GET /Organisations/{organisationId}/Certificates/{certType}/History - Returns certificate transaction history."""
         params: dict = {}
         if from_date:
@@ -310,7 +339,7 @@ class RER_wrapper:
             f"Organisations/{organisation_id}/Certificates/{cert_type}/History",
             params=params,
         )
-        return _parse_certificate_history(response.text, organisation_id, cert_type)
+        return rer_html._parse_certificate_history(response.text, organisation_id, cert_type)
 
 # endregion class
 
