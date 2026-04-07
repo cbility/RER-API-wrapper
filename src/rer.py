@@ -269,8 +269,8 @@ class RER_wrapper:
         return rer_html._parse_user_organisations(pages)
 
     def get_organisation(self, organisation_id: str) -> rer_html.OrganisationDetail:
-        """GET /Organisations/{organisationId} - Returns organisation overview."""
-        response = self._request(f"Organisations/{organisation_id}")
+        """GET /Organisations/OrganisationReview/{organisationId} - Returns organisation details."""
+        response = self._request(f"Organisations/OrganisationReview/{organisation_id}")
         return rer_html._parse_organisation(response.text)
 
     def get_organisation_output_data(

@@ -1,4 +1,4 @@
-"""Tests for RER_wrapper.get_organisation() - GET /Organisations/{id}"""
+"""Tests for RER_wrapper.get_organisation() - GET /Organisations/OrganisationReview/{id}"""
 import sys
 import os
 import json
@@ -53,14 +53,26 @@ def test_name_is_nonempty_string(organisation):
     assert len(organisation["name"]) > 0
 
 
-def test_task_summary_is_list(organisation):
-    assert isinstance(organisation["task_summary"], list)
+def test_type_is_nonempty_string(organisation):
+    assert isinstance(organisation["type"], str)
+    assert len(organisation["type"]) > 0
 
 
-def test_each_task_summary_has_required_fields(organisation):
-    for task in organisation["task_summary"]:
-        assert isinstance(task["task_name"], str) and len(task["task_name"]) > 0
-        assert isinstance(task["task_count"], int) and task["task_count"] >= 0
+def test_status_is_nonempty_string(organisation):
+    assert isinstance(organisation["status"], str)
+    assert len(organisation["status"]) > 0
+
+
+def test_address_has_required_fields(organisation):
+    addr = organisation["address"]
+    assert isinstance(addr["name"], str) and len(addr["name"]) > 0
+    assert isinstance(addr["address"], str) and len(addr["address"]) > 0
+
+
+def test_contact_has_required_fields(organisation):
+    contact = organisation["contact"]
+    assert isinstance(contact["name"], str) and len(contact["name"]) > 0
+    assert isinstance(contact["email"], str) and "@" in contact["email"]
 
 
 def test_tabs_is_nonempty_list(organisation):
@@ -68,11 +80,11 @@ def test_tabs_is_nonempty_list(organisation):
     assert len(organisation["tabs"]) > 0
 
 
-def test_print_raw(organisation):
-    import json
-    print(json.dumps(organisation, indent=2))
-
-
 def test_tabs_include_overview(organisation):
     tab_names = [t["name"] for t in organisation["tabs"]]
     assert "Overview" in tab_names
+
+
+def test_print_raw(organisation):
+    print(json.dumps(organisation, indent=2))
+

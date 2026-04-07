@@ -18,9 +18,13 @@ class User(TypedDict):
     active_organisations: int
 
 
-class OrganisationTaskSummary(TypedDict):
-    task_name: str
-    task_count: int
+class OrganisationAddress(TypedDict):
+    name: str
+    address: str
+
+class OrganisationContact(TypedDict):
+    name: str
+    email: str
 
 class OrganisationTab(TypedDict):
     name: str
@@ -29,7 +33,10 @@ class OrganisationTab(TypedDict):
 class OrganisationDetail(TypedDict):
     organisation_id: str
     name: str
-    task_summary: list[OrganisationTaskSummary]
+    type: str
+    status: str
+    address: OrganisationAddress
+    contact: OrganisationContact
     tabs: list[OrganisationTab]
 
 class OutputDataTask(TypedDict):
@@ -159,25 +166,20 @@ def _parse_user_organisations(pages: list[str]) -> list[OrganisationSummary]:
 def _parse_organisation(html: str) -> OrganisationDetail:
     tree = HTMLParser(html)
 
-    h1 = tree.css_first("h1.govuk-heading-xl")
-    caption = h1.css_first("span.govuk-caption-l") if h1 else None
-    org_id = ""
-    if caption:
-        org_id = caption.text(strip=True).split(",")[-1].strip()
-        caption.decompose()
-    name = h1.text(strip=True) if h1 else ""
+    # Parse all definition lists by position
+    dls = tree.css("dl")
 
-    # Task summary table
-    task_summary: list[OrganisationTaskSummary] = []
-    for row in tree.css("table tr")[1:]:
-        cells = row.css("td")
-        if len(cells) >= 2:
-            task_name = cells[0].text(strip=True)
-            try:
-                task_count = int(cells[1].text(strip=True))
-            except ValueError:
-                task_count = 0
-            task_summary.append(OrganisationTaskSummary(task_name=task_name, task_count=task_count))
+    def dl_to_dict(dl) -> dict[str, str]:
+        result: dict[str, str] = {}
+        dts = dl.css("dt")
+        dds = dl.css("dd")
+        for dt, dd in zip(dts, dds):
+            result[dt.text(strip=True)] = dd.text(separator=" ", strip=True)
+        return result
+
+    org_dict = dl_to_dict(dls[0]) if len(dls) > 0 else {}
+    addr_dict = dl_to_dict(dls[1]) if len(dls) > 1 else {}
+    contact_dict = dl_to_dict(dls[2]) if len(dls) > 2 else {}
 
     # Tab navigation
     tabs: list[OrganisationTab] = [
@@ -185,7 +187,21 @@ def _parse_organisation(html: str) -> OrganisationDetail:
         for a in tree.css(".moj-sub-navigation a")
     ]
 
-    return OrganisationDetail(organisation_id=org_id, name=name, task_summary=task_summary, tabs=tabs)
+    return OrganisationDetail(
+        organisation_id=org_dict.get("Organisation reference", ""),
+        name=org_dict.get("Organisation name", ""),
+        type=org_dict.get("Organisation type", ""),
+        status=org_dict.get("Account status", ""),
+        address=OrganisationAddress(
+            name=addr_dict.get("Name", ""),
+            address=addr_dict.get("Address", ""),
+        ),
+        contact=OrganisationContact(
+            name=contact_dict.get("Name", ""),
+            email=contact_dict.get("Email address", ""),
+        ),
+        tabs=tabs,
+    )
 
 def _parse_output_data_tasks(html: str, organisation_id: str) -> OutputDataTaskList:
     tree = HTMLParser(html)
