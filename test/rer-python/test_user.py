@@ -52,12 +52,6 @@ def test_outstanding_tasks_is_non_negative_int(user):
     assert isinstance(user["outstanding_tasks"], int)
     assert user["outstanding_tasks"] >= 0
 
-
-def test_active_organisations_is_positive_int(user):
-    assert isinstance(user["active_organisations"], int)
-    assert user["active_organisations"] > 0
-
-
 def test_organisations_is_list(user):
     assert isinstance(user["organisations"], list)
 

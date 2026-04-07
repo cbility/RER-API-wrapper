@@ -27,8 +27,8 @@ def wrapper():
 
 @pytest.fixture(scope="module")
 def first_org_id(wrapper):
-    dashboard = wrapper.get_user_dashboard()
-    return dashboard["organisations"][0]["organisation_id"]
+    user = wrapper.get_user()
+    return user["organisations"][0]["organisation_id"]
 
 
 @pytest.fixture(scope="module")
