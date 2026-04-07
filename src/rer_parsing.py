@@ -59,6 +59,68 @@ class StationDeclarationTaskList(TypedDict):
     organisation_id: str
     tasks: list[StationDeclarationTask]
 
+class OrganisationStation(TypedDict):
+    station_id: str
+    station_name: str
+    organisation_name: str
+    country: str
+    technology_group: str
+    statuses: list[str]
+    last_updated: str
+    url: str
+
+class OrganisationStationList(TypedDict):
+    organisation_id: str
+    stations: list[OrganisationStation]
+
+class SchemeAccreditation(TypedDict):
+    scheme: str
+    accreditation_reference: str
+    application_date: str
+    effective_from: str
+    status: str
+
+class StationCapacity(TypedDict):
+    capacity_type: str
+    commissioning_date: str
+    date_added: str
+    tic: str
+    dnc: str
+
+class StationDetail(TypedDict):
+    station_id: str
+    station_name: str
+    organisation_name: str
+    country: str
+    # Key facts
+    commissioning_date: str
+    total_installed_capacity: str
+    technology_group: str
+    prelim_approval: str
+    # Location
+    address: str
+    grid_reference: str
+    # Technical
+    application_date: str
+    declared_net_capacity: str
+    roofit_technology: str
+    rego_technology: str
+    # Station layout
+    connected_to_network: str
+    will_export: str
+    export_connection_capacity: str
+    # Description
+    station_description: str
+    has_battery_storage: str
+    has_standby_generator: str
+    # Scheme
+    scheme: str
+    rego_accredited: str
+    output_submission_frequency: str
+    # Tables
+    scheme_accreditations: list[SchemeAccreditation]
+    station_capacities: list[StationCapacity]
+
 class CertificateTypeSummary(TypedDict):
     cert_type: str
     issued: int
@@ -247,6 +309,107 @@ def _parse_station_declaration_tasks(html: str, organisation_id: str) -> Station
         ))
 
     return StationDeclarationTaskList(organisation_id=organisation_id, tasks=tasks)
+
+def _parse_organisation_stations(html: str, organisation_id: str) -> OrganisationStationList:
+    tree = HTMLParser(html)
+    stations: list[OrganisationStation] = []
+
+    for row in tree.css("table tr")[1:]:
+        cells = row.css("td")
+        if len(cells) < 7:
+            continue
+        link = cells[1].css_first("a")
+        url = link.attrs.get("href", "") if link else ""
+        station_id = url.split("/Stations/")[-1] if url else ""
+        statuses = [t.text(strip=True) for t in cells[5].css("strong")]
+        stations.append(OrganisationStation(
+            station_id=station_id,
+            station_name=cells[1].text(strip=True),
+            organisation_name=cells[0].text(strip=True),
+            country=cells[3].text(strip=True),
+            technology_group=cells[4].text(strip=True),
+            statuses=statuses,
+            last_updated=cells[6].text(strip=True),
+            url=url,
+        ))
+
+    return OrganisationStationList(organisation_id=organisation_id, stations=stations)
+
+def _parse_station(html: str, station_id: str) -> StationDetail:
+    tree = HTMLParser(html)
+
+    # H1 spans: [org_name (caption), station_name, subtitle (caption)]
+    h1 = tree.css_first("h1")
+    spans = h1.css("span") if h1 else []
+    captions = [s for s in spans if "govuk-caption-l" in (s.attrs.get("class") or "")]
+    non_captions = [s for s in spans if "govuk-caption-l" not in (s.attrs.get("class") or "")]
+    organisation_name = captions[0].text(strip=True) if len(captions) > 0 else ""
+    station_name = non_captions[0].text(strip=True) if non_captions else ""
+    subtitle = captions[1].text(strip=True) if len(captions) > 1 else ""
+    country = subtitle.split("|")[0].strip() if subtitle else ""
+
+    # Merge all DL key->value pairs
+    info: dict[str, str] = {}
+    for dl in tree.css("dl"):
+        for dt, dd in zip(dl.css("dt"), dl.css("dd")):
+            info[dt.text(strip=True)] = dd.text(separator=" ", strip=True)
+
+    # Scheme accreditations table (TABLE 0)
+    scheme_accreditations: list[SchemeAccreditation] = []
+    tables = tree.css("table")
+    if len(tables) > 0:
+        for row in tables[0].css("tr")[1:]:
+            cells = row.css("td")
+            if len(cells) >= 5:
+                scheme_accreditations.append(SchemeAccreditation(
+                    scheme=cells[0].text(strip=True),
+                    accreditation_reference=cells[1].text(strip=True),
+                    application_date=cells[2].text(strip=True),
+                    effective_from=cells[3].text(strip=True),
+                    status=cells[4].text(strip=True),
+                ))
+
+    # Station layout capacities table (TABLE 1)
+    station_capacities: list[StationCapacity] = []
+    if len(tables) > 1:
+        for row in tables[1].css("tr")[1:]:
+            cells = row.css("td")
+            if len(cells) >= 5:
+                station_capacities.append(StationCapacity(
+                    capacity_type=cells[0].text(strip=True),
+                    commissioning_date=cells[1].text(strip=True),
+                    date_added=cells[2].text(strip=True),
+                    tic=cells[3].text(strip=True),
+                    dnc=cells[4].text(strip=True),
+                ))
+
+    return StationDetail(
+        station_id=station_id,
+        station_name=station_name,
+        organisation_name=organisation_name,
+        country=country,
+        commissioning_date=info.get("Commissioning date", ""),
+        total_installed_capacity=info.get("Total installed capacity (TIC)", ""),
+        technology_group=info.get("Technology group", ""),
+        prelim_approval=info.get("Prelim approval", ""),
+        address=info.get("Address", ""),
+        grid_reference=info.get("Grid reference", ""),
+        application_date=info.get("Application date", ""),
+        declared_net_capacity=info.get("Declared net capacity", ""),
+        roofit_technology=info.get("ROO-FIT technology", ""),
+        rego_technology=info.get("REGO technology", ""),
+        connected_to_network=info.get("Connected to transmission/distribution network", ""),
+        will_export=info.get("Will export renewable generation", ""),
+        export_connection_capacity=info.get("Export connection capacity", ""),
+        station_description=info.get("Station description", ""),
+        has_battery_storage=info.get("Has battery storage?", ""),
+        has_standby_generator=info.get("Has standby generator", ""),
+        scheme=info.get("Scheme", ""),
+        rego_accredited=info.get("REGO accredited", ""),
+        output_submission_frequency=info.get("Output data submission frequency", ""),
+        scheme_accreditations=scheme_accreditations,
+        station_capacities=station_capacities,
+    )
 
 def _parse_certificates_overview(html: str, organisation_id: str) -> CertificatesOverview:
     tree = HTMLParser(html)

@@ -230,6 +230,7 @@ class RER_wrapper:
             response.raise_for_status()
         return response
 
+    # region getters
     def get_user(self) -> rer_parsing.User:
         """GET /User - Returns user dashboard with stats and organisation list."""
         response = self._request("User")
@@ -273,7 +274,7 @@ class RER_wrapper:
         response = self._request(f"Organisations/OrganisationReview/{organisation_id}")
         return rer_parsing._parse_organisation(response.text)
 
-    def get_organisation_output_data(
+    def get_organisation_output_data_tasks(
         self,
         organisation_id: str,
         statuses: list[str] | None = None,
@@ -292,7 +293,7 @@ class RER_wrapper:
         response = self._request(f"Organisations/{organisation_id}/Tasks/OutputData", params=params)
         return rer_parsing._parse_output_data_tasks(response.text, organisation_id)
 
-    def get_organisation_station_declarations(
+    def get_organisation_station_declaration_tasks(
         self,
         organisation_id: str,
         sort_field: str | None = None,
@@ -307,6 +308,16 @@ class RER_wrapper:
             params["sortDirection"] = sort_direction
         response = self._request(f"Organisations/{organisation_id}/Tasks/StationDeclarations", params=params)
         return rer_parsing._parse_station_declaration_tasks(response.text, organisation_id)
+
+    def get_organisation_stations(self, organisation_id: str) -> rer_parsing.OrganisationStationList:
+        """GET /Organisations/{organisationId}/Stations - Returns list of stations for the organisation."""
+        response = self._request(f"Organisations/{organisation_id}/Stations")
+        return rer_parsing._parse_organisation_stations(response.text, organisation_id)
+
+    def get_station(self, station_id: str) -> rer_parsing.StationDetail:
+        """GET /Organisations/Stations/{stationId} - Returns full station detail."""
+        response = self._request(f"Organisations/Stations/{station_id}")
+        return rer_parsing._parse_station(response.text, station_id)
 
     def get_organisation_certificates(self, organisation_id: str) -> rer_parsing.CertificatesOverview:
         """GET /Organisations/{organisationId}/Certificates - Returns certificates overview."""
@@ -341,6 +352,7 @@ class RER_wrapper:
         )
         return rer_parsing._parse_certificate_history(response.text, organisation_id, cert_type)
 
+    # endregion getters
 # endregion class
 
 # region testing
