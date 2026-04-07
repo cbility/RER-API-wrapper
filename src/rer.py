@@ -480,6 +480,7 @@ class RER_wrapper:
     base_url="https://rer.ofgem.gov.uk/"
     __user_email: str | None = None
     __user_password: str | None = None
+    has_fresh_cookies: bool = False
 
     def __init__(self, cookies: dict | None = None, user_email: str | None = None, user_password: str | None = None, headers: dict = RER_DEFAULT_HEADERS):
         self.__user_email = user_email
@@ -528,6 +529,7 @@ class RER_wrapper:
 
         self.__user_email = self.get_user_email()
         log.info(f"Authenticated as {self.__user_email} using new session.")
+        self.has_fresh_cookies = True
         return
 
     def get_user_email(self) -> str:
@@ -635,21 +637,19 @@ if __name__ == "__main__":
 
     def _save_cookies(cookies, cookies_file="../rer_cookies.json"):
         """Save cookies to a file."""
+        # remove analytics/tracking cookies
+        persistent_cookies = {key: value for key, value in cookies.items() if not key.startswith("ai_")}
         with open(cookies_file, "w") as f:
-            json.dump(cookies, f, indent=2)
+            json.dump(persistent_cookies, f, indent=2)
         log.debug(f"Cookies saved to {cookies_file}")
 
-    def _load_cookies(cookies_file="../rer_cookies.json"):
+    def _load_cookies(cookies_file="../rer_cookies.json") -> dict:
         """Load saved cookies."""
         try:
             with open(cookies_file) as f:
                 return json.load(f)
         except FileNotFoundError: 
             return None
-
-    def _cookies_to_dict(cookies):
-        """Convert Playwright cookies to requests format."""
-        return {c["name"]: c["value"] for c in cookies}
 
     # Load environment variables from .env file
     load_dotenv()
@@ -662,14 +662,14 @@ if __name__ == "__main__":
     cookies = _load_cookies()
     if cookies:
         log.debug("Loaded cookies from file")
-        cookies = _cookies_to_dict(cookies)
     else:
         log.debug("No cookies found in file, will authenticate via browser")
 
     rer = RER_wrapper(cookies=cookies, user_email=os.getenv("RER_EMAIL"), user_password=os.getenv("RER_PASSWORD"))
 
     # Save cookies for future use
-    _save_cookies(rer.get_cookies())
+    if rer.has_fresh_cookies:
+        _save_cookies(rer.get_cookies())
 
 # endregion testing
 
