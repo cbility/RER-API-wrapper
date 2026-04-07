@@ -2,7 +2,7 @@
 import os
 from _auth import get_wrapper
 
-OUTPUT = os.path.join(os.path.dirname(__file__), 'user_dashboard.html')
+OUTPUT = os.path.join(os.path.dirname(__file__), 'user.html')
 
 wrapper = get_wrapper()
 response = wrapper.session.get(wrapper.base_url + 'User')

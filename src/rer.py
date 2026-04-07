@@ -25,7 +25,7 @@ class OrganisationSummary(TypedDict):
     status: str
     user_status: str
 
-class UserDashboard(TypedDict):
+class User(TypedDict):
     email: str
     full_name: str
     outstanding_tasks: int
@@ -225,7 +225,7 @@ def _retrieve_mfa_code(button_clicked_after: datetime.datetime, max_retries = 5,
 
 # region parsers
 
-def _parse_user_dashboard(html: str) -> UserDashboard:
+def _parse_user(html: str) -> User:
     soup = BeautifulSoup(html, 'html.parser')
 
     h1 = soup.find("h1", class_="govuk-heading-xl")
@@ -282,7 +282,7 @@ def _parse_user_dashboard(html: str) -> UserDashboard:
                 user_status=cells[4].get_text(strip=True),
             ))
 
-    return UserDashboard(
+    return User(
         email=email,
         full_name=full_name,
         outstanding_tasks=outstanding_tasks,
@@ -547,7 +547,7 @@ class RER_wrapper:
             log.error(f"Unexpected response when retrieving user email: {response.status_code} - {response.text}")
             raise Exception(f"Could not retrieve user email: {response.status_code}")
 
-    def get_user_dashboard(self, sort_field: str | None = None, sort_direction: str | None = None, page_number: int = 1) -> UserDashboard:
+    def get_user(self, sort_field: str | None = None, sort_direction: str | None = None, page_number: int = 1) -> User:
         """GET /User - Returns user dashboard with stats and organisation list."""
         params: dict = {"pageNumber": page_number}
         if sort_field:
@@ -557,7 +557,7 @@ class RER_wrapper:
 
         response = self.session.get(self.base_url + "User", params=params)
         response.raise_for_status()
-        return _parse_user_dashboard(response.text)
+        return _parse_user(response.text)
 
     def get_user_activity(self, expand_activity_details: bool = False) -> UserActivity:
         """GET /User/Activity - Returns user activity timeline."""

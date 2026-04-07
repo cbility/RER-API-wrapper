@@ -1,4 +1,4 @@
-"""Tests for RER_wrapper.get_user_dashboard() - GET /User"""
+"""Tests for RER_wrapper.get_user() - GET /User"""
 import sys
 import os
 import json
@@ -7,7 +7,7 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 
 from dotenv import load_dotenv
-from rer import RER_wrapper, UserDashboard, OrganisationSummary
+from rer import RER_wrapper, User, OrganisationSummary
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
 
@@ -26,53 +26,53 @@ def wrapper():
 
 
 @pytest.fixture(scope="module")
-def dashboard(wrapper):
-    return wrapper.get_user_dashboard()
+def user(wrapper):
+    return wrapper.get_user()
 
 
-def test_returns_user_dashboard_type(dashboard):
-    assert isinstance(dashboard, dict)
+def test_returns_user_type(user):
+    assert isinstance(user, dict)
 
 
-def test_email_is_string_and_nonempty(dashboard):
-    assert isinstance(dashboard["email"], str)
-    assert len(dashboard["email"]) > 0
+def test_email_is_string_and_nonempty(user):
+    assert isinstance(user["email"], str)
+    assert len(user["email"]) > 0
 
 
-def test_email_contains_at(dashboard):
-    assert "@" in dashboard["email"]
+def test_email_contains_at(user):
+    assert "@" in user["email"]
 
 
-def test_full_name_is_string_and_nonempty(dashboard):
-    assert isinstance(dashboard["full_name"], str)
-    assert len(dashboard["full_name"]) > 0
+def test_full_name_is_string_and_nonempty(user):
+    assert isinstance(user["full_name"], str)
+    assert len(user["full_name"]) > 0
 
 
-def test_outstanding_tasks_is_non_negative_int(dashboard):
-    assert isinstance(dashboard["outstanding_tasks"], int)
-    assert dashboard["outstanding_tasks"] >= 0
+def test_outstanding_tasks_is_non_negative_int(user):
+    assert isinstance(user["outstanding_tasks"], int)
+    assert user["outstanding_tasks"] >= 0
 
 
-def test_active_organisations_is_positive_int(dashboard):
-    assert isinstance(dashboard["active_organisations"], int)
-    assert dashboard["active_organisations"] > 0
+def test_active_organisations_is_positive_int(user):
+    assert isinstance(user["active_organisations"], int)
+    assert user["active_organisations"] > 0
 
 
-def test_organisations_is_list(dashboard):
-    assert isinstance(dashboard["organisations"], list)
+def test_organisations_is_list(user):
+    assert isinstance(user["organisations"], list)
 
 
-def test_organisations_nonempty(dashboard):
-    assert len(dashboard["organisations"]) > 0
+def test_organisations_nonempty(user):
+    assert len(user["organisations"]) > 0
 
 
-def test_print_raw(dashboard):
+def test_print_raw(user):
     import json
-    print(json.dumps(dashboard, indent=2))
+    print(json.dumps(user, indent=2))
 
 
-def test_each_organisation_has_required_fields(dashboard):
-    for org in dashboard["organisations"]:
+def test_each_organisation_has_required_fields(user):
+    for org in user["organisations"]:
         assert isinstance(org["organisation_id"], str)
         assert org["organisation_id"].startswith("GEN")
         assert isinstance(org["name"], str) and len(org["name"]) > 0
