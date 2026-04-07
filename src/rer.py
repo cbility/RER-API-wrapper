@@ -13,7 +13,7 @@ import json # for saving cookies
 import re # for pagination parsing
 import math # for pagination calculation
 
-import rer_html as rer_html
+import rer_parsing as rer_parsing
 
 # endregion imports
 
@@ -230,16 +230,16 @@ class RER_wrapper:
             response.raise_for_status()
         return response
 
-    def get_user(self) -> rer_html.User:
+    def get_user(self) -> rer_parsing.User:
         """GET /User - Returns user dashboard with stats and organisation list."""
         response = self._request("User")
-        return rer_html._parse_user(response.text)
+        return rer_parsing._parse_user(response.text)
 
     def get_user_organisations(
         self,
         sort_field: str | None = None,
         sort_direction: str | None = None,
-    ) -> list[rer_html.OrganisationSummary]:
+    ) -> list[rer_parsing.OrganisationSummary]:
         """GET /User - Returns all organisations for the authenticated user across all pages."""
         params: dict = {"pageNumber": 1}
         if sort_field:
@@ -266,12 +266,12 @@ class RER_wrapper:
             params["pageNumber"] = page_num
             pages.append(self._request("User", params=params).text)
 
-        return rer_html._parse_user_organisations(pages)
+        return rer_parsing._parse_user_organisations(pages)
 
-    def get_organisation(self, organisation_id: str) -> rer_html.OrganisationDetail:
+    def get_organisation(self, organisation_id: str) -> rer_parsing.OrganisationDetail:
         """GET /Organisations/OrganisationReview/{organisationId} - Returns organisation details."""
         response = self._request(f"Organisations/OrganisationReview/{organisation_id}")
-        return rer_html._parse_organisation(response.text)
+        return rer_parsing._parse_organisation(response.text)
 
     def get_organisation_output_data(
         self,
@@ -280,7 +280,7 @@ class RER_wrapper:
         sort_field: str | None = None,
         sort_direction: str | None = None,
         page_number: int = 1,
-    ) -> rer_html.OutputDataTaskList:
+    ) -> rer_parsing.OutputDataTaskList:
         """GET /Organisations/{organisationId}/Tasks/OutputData - Returns output data tasks."""
         params: dict = {"pageNumber": page_number}
         if statuses:
@@ -290,7 +290,7 @@ class RER_wrapper:
         if sort_direction:
             params["sortDirection"] = sort_direction
         response = self._request(f"Organisations/{organisation_id}/Tasks/OutputData", params=params)
-        return rer_html._parse_output_data_tasks(response.text, organisation_id)
+        return rer_parsing._parse_output_data_tasks(response.text, organisation_id)
 
     def get_organisation_station_declarations(
         self,
@@ -298,7 +298,7 @@ class RER_wrapper:
         sort_field: str | None = None,
         sort_direction: str | None = None,
         page_number: int = 1,
-    ) -> rer_html.StationDeclarationTaskList:
+    ) -> rer_parsing.StationDeclarationTaskList:
         """GET /Organisations/{organisationId}/Tasks/StationDeclarations - Returns station declaration tasks."""
         params: dict = {"pageNumber": page_number}
         if sort_field:
@@ -306,21 +306,21 @@ class RER_wrapper:
         if sort_direction:
             params["sortDirection"] = sort_direction
         response = self._request(f"Organisations/{organisation_id}/Tasks/StationDeclarations", params=params)
-        return rer_html._parse_station_declaration_tasks(response.text, organisation_id)
+        return rer_parsing._parse_station_declaration_tasks(response.text, organisation_id)
 
-    def get_organisation_certificates(self, organisation_id: str) -> rer_html.CertificatesOverview:
+    def get_organisation_certificates(self, organisation_id: str) -> rer_parsing.CertificatesOverview:
         """GET /Organisations/{organisationId}/Certificates - Returns certificates overview."""
         response = self._request(f"Organisations/{organisation_id}/Certificates")
-        return rer_html._parse_certificates_overview(response.text, organisation_id)
+        return rer_parsing._parse_certificates_overview(response.text, organisation_id)
 
     def get_organisation_certificates_breakdown(
         self,
         organisation_id: str,
         cert_type: str,
-    ) -> rer_html.CertificateBreakdown:
+    ) -> rer_parsing.CertificateBreakdown:
         """GET /Organisations/{organisationId}/Certificates/{certType}/Breakdown - Returns certificate breakdown."""
         response = self._request(f"Organisations/{organisation_id}/Certificates/{cert_type}/Breakdown")
-        return rer_html._parse_certificate_breakdown(response.text, organisation_id, cert_type)
+        return rer_parsing._parse_certificate_breakdown(response.text, organisation_id, cert_type)
 
     def get_organisation_certificates_history(
         self,
@@ -328,7 +328,7 @@ class RER_wrapper:
         cert_type: str,
         from_date: str | None = None,
         to_date: str | None = None,
-    ) -> rer_html.CertificateHistory:
+    ) -> rer_parsing.CertificateHistory:
         """GET /Organisations/{organisationId}/Certificates/{certType}/History - Returns certificate transaction history."""
         params: dict = {}
         if from_date:
@@ -339,7 +339,7 @@ class RER_wrapper:
             f"Organisations/{organisation_id}/Certificates/{cert_type}/History",
             params=params,
         )
-        return rer_html._parse_certificate_history(response.text, organisation_id, cert_type)
+        return rer_parsing._parse_certificate_history(response.text, organisation_id, cert_type)
 
 # endregion class
 
