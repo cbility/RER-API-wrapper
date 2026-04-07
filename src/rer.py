@@ -284,91 +284,6 @@ def _parse_user(html: str) -> User:
         organisations=organisations,
     )
 
-
-def _parse_user_activity(html: str) -> UserActivity:
-    tree = HTMLParser(html)
-    items: list[ActivityItem] = []
-
-    timeline = tree.css_first(".moj-timeline")
-    if not timeline:
-        return UserActivity(items=items)
-
-    for item_el in timeline.css(".moj-timeline__item"):
-        title_el = item_el.css_first(".moj-timeline__title")
-        byline_el = item_el.css_first(".moj-timeline__byline")
-
-        # Read byline before decomposing it out of the title
-        if title_el and byline_el:
-            by = byline_el.text(separator=" ", strip=True).removeprefix("by").strip()
-            byline_el.decompose()
-            title = title_el.text(strip=True)
-        else:
-            title = title_el.text(strip=True) if title_el else ""
-            by = ""
-
-        time_el = item_el.css_first("time")
-        datetime_iso = time_el.attrs.get("datetime", "") if time_el else ""
-        datetime_display = time_el.text(strip=True) if time_el else ""
-
-        # Description: prefer the collapsible summary label, fall back to full text
-        desc_el = item_el.css_first(".moj-timeline__description")
-        description = ""
-        if desc_el:
-            summary = desc_el.css_first(".govuk-details__summary-text")
-            if summary:
-                description = summary.text(strip=True)
-            else:
-                description = desc_el.text(separator=" ", strip=True)
-
-        items.append(ActivityItem(
-            title=title,
-            by=by,
-            datetime_iso=datetime_iso,
-            datetime_display=datetime_display,
-            description=description,
-        ))
-
-    return UserActivity(items=items)
-
-
-def _parse_user_ownership(html: str) -> UserOwnership:
-    tree = HTMLParser(html)
-    sections: list[OwnershipSection] = []
-
-    for h2 in tree.css("h2"):
-        heading = h2.text(strip=True)
-        if heading.lower() in ("support links",):
-            continue
-        # Walk siblings until the next h2
-        content_parts: list[str] = []
-        sib = h2.next
-        while sib is not None and sib.tag != "h2":
-            if sib.tag != "-text":
-                text = sib.text(strip=True)
-                if text:
-                    content_parts.append(text)
-            sib = sib.next
-        sections.append(OwnershipSection(heading=heading, content=" ".join(content_parts)))
-
-    return UserOwnership(sections=sections)
-
-
-def _parse_user_notifications(html: str) -> UserNotifications:
-    tree = HTMLParser(html)
-    categories: list[NotificationCategory] = []
-
-    for row in tree.css("table tr")[1:]:
-        cells = row.css("td")
-        if len(cells) < 2:
-            continue
-        category = cells[0].text(strip=True)
-        link = cells[1].css_first("a")
-        manage_url = link.attrs.get("href", "") if link else ""
-        categories.append(NotificationCategory(category=category, manage_url=manage_url))
-
-    return UserNotifications(categories=categories)
-
-
 def _parse_organisation(html: str) -> OrganisationDetail:
     tree = HTMLParser(html)
 
@@ -540,27 +455,6 @@ class RER_wrapper:
         response = self.session.get(self.base_url + "User", params=params)
         response.raise_for_status()
         return _parse_user(response.text)
-
-    def get_user_activity(self, expand_activity_details: bool = False) -> UserActivity:
-        """GET /User/Activity - Returns user activity timeline."""
-        params: dict = {}
-        if expand_activity_details:
-            params["expandActivityDetails"] = "true"
-        response = self.session.get(self.base_url + "User/Activity", params=params)
-        response.raise_for_status()
-        return _parse_user_activity(response.text)
-
-    def get_user_ownership(self) -> UserOwnership:
-        """GET /User/Ownership - Returns ownership guidance sections."""
-        response = self.session.get(self.base_url + "User/Ownership")
-        response.raise_for_status()
-        return _parse_user_ownership(response.text)
-
-    def get_user_notifications(self) -> UserNotifications:
-        """GET /User/Notifications - Returns email notification categories."""
-        response = self.session.get(self.base_url + "User/Notifications")
-        response.raise_for_status()
-        return _parse_user_notifications(response.text)
 
     def get_organisation(self, organisation_id: str) -> OrganisationDetail:
         """GET /Organisations/{organisationId} - Returns organisation overview."""
