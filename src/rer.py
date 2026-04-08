@@ -322,6 +322,26 @@ class RER_wrapper:
         response = self._request(f"Organisations/Stations/{station_id}")
         return rer_parsing._parse_station(response.text, station_id)
 
+    def find_organisation(
+        self,
+        organisation_id: str,
+        recipient_reference: str,
+        cert_type: str = "REGO",
+    ) -> "rer_parsing.OrganisationSearchResult | None":
+        """POST /Organisations/{organisationId}/Certificates/{certType}/FindOrganisation
+        Searches for an organisation by reference. Returns the matched organisation or None.
+        This is a read-only search — no certificates are transferred.
+        """
+        get_resp = self._request(f"Organisations/{organisation_id}/Certificates/{cert_type}/FindOrganisation")
+        token_el = HTMLParser(get_resp.text).css_first("input[name=__RequestVerificationToken]")
+        csrf = token_el.attrs.get("value", "") if token_el else ""
+        post_resp = self.session.post(
+            self.base_url + f"Organisations/{organisation_id}/Certificates/{cert_type}/FindOrganisation",
+            data={"RecipientOrganisationReference": recipient_reference, "__RequestVerificationToken": csrf},
+        )
+        post_resp.raise_for_status()
+        return rer_parsing._parse_find_organisation(post_resp.text)
+
     def get_organisation_certificates(self, organisation_id: str) -> rer_parsing.CertificatesOverview:
         """GET /Organisations/{organisationId}/Certificates - Returns certificates overview."""
         response = self._request(f"Organisations/{organisation_id}/Certificates")

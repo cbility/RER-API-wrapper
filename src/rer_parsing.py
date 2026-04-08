@@ -121,6 +121,10 @@ class StationDetail(TypedDict):
     scheme_accreditations: list[SchemeAccreditation]
     station_capacities: list[StationCapacity]
 
+class OrganisationSearchResult(TypedDict):
+    reference: str
+    name: str
+
 class CertificateTypeSummary(TypedDict):
     cert_type: str
     issued: int
@@ -410,6 +414,24 @@ def _parse_station(html: str, station_id: str) -> StationDetail:
         scheme_accreditations=scheme_accreditations,
         station_capacities=station_capacities,
     )
+
+def _parse_find_organisation(html: str) -> Optional[OrganisationSearchResult]:
+    """Returns the matched organisation, or None if no match was found."""
+    tree = HTMLParser(html)
+    error = tree.css_first(".govuk-inset-text")
+    if error:
+        return None
+    dl = tree.css_first("dl")
+    if not dl:
+        return None
+    info: dict[str, str] = {}
+    for dt, dd in zip(dl.css("dt"), dl.css("dd")):
+        info[dt.text(strip=True)] = dd.text(strip=True)
+    reference = info.get("Reference", "")
+    name = info.get("Organisation", "")
+    if not reference:
+        return None
+    return OrganisationSearchResult(reference=reference, name=name)
 
 def _parse_certificates_overview(html: str, organisation_id: str) -> CertificatesOverview:
     tree = HTMLParser(html)
