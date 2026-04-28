@@ -95,7 +95,7 @@ def _browser_authenticate_rer(email: str, password: str) -> dict:
 
         # Save cookies
         cookies = page.context.cookies()
-        cookies_dict = {c["name"]: c["value"] for c in cookies}
+        cookies_dict = {c.get("name"): c.get("value") for c in cookies}
 
         browser.close()
         return cookies_dict
@@ -208,7 +208,8 @@ class RER_wrapper:
             log.debug("No stored cookies, authenticating...")
 
         # no cookies provided or session invalid - authenticate via browser automation
-        
+
+        assert self.__user_email and self.__user_password, "User email and password must be provided for browser authentication."
         cookies = _browser_authenticate_rer(email=self.__user_email, password=self.__user_password)
         session.cookies.update(cookies)
         self.session = session
@@ -396,7 +397,7 @@ if __name__ == "__main__":
             with open(cookies_file) as f:
                 return json.load(f)
         except FileNotFoundError: 
-            return None
+            raise FileNotFoundError(f"Cookies file not found at {cookies_file}. Please authenticate via browser at least once to create the cookies file.")
 
     # Load environment variables from .env file
     load_dotenv()

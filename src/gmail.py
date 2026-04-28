@@ -2,7 +2,7 @@
 
 import os
 import logging
-from datetime import datetime
+from datetime import date, datetime
 from typing import List, TypedDict, NotRequired
 
 from google.oauth2.credentials import Credentials
@@ -104,7 +104,7 @@ class GmailMessage(TypedDict):
 
 # region main
 
-def get_gmail_messages(since_date: datetime, max_messages: int = 100, token_file: str = "../gmail_token.json") -> List[GmailMessage]:
+def get_gmail_messages(since_date: date, max_messages: int = 100, token_file: str = "../gmail_token.json") -> List[GmailMessage]:
     """
     Retrieve Gmail messages since a specific date.
     
