@@ -170,7 +170,11 @@ def _parse_user(html: str) -> User:
     tree = HTMLParser(html)
 
     h1 = tree.css_first("h1.govuk-heading-xl")
+    if not h1:
+        raise ValueError("Could not find user name in page")
     caption = h1.css_first("span.govuk-caption-l")
+    if not caption:
+        raise ValueError("Could not find user email in page")
     email = caption.text(strip=True).split(",")[-1].strip()
 
     # Remove caption, links, and spans to isolate the full name
@@ -218,6 +222,8 @@ def _parse_user_organisations(pages: list[str]) -> list[OrganisationSummary]:
             org_id = ""
             if org_link:
                 href = org_link.attrs.get("href", "")
+                if not href:
+                    raise ValueError("Organisation link does not have href")
                 org_id = href.split("/Organisations/")[-1].split("/")[0]
             organisations.append(OrganisationSummary(
                 organisation_id=org_id,
@@ -248,10 +254,12 @@ def _parse_organisation(html: str) -> OrganisationDetail:
     contact_dict = dl_to_dict(dls[2]) if len(dls) > 2 else {}
 
     # Tab navigation
-    tabs: list[OrganisationTab] = [
-        OrganisationTab(name=a.text(strip=True), url=a.attrs.get("href", ""))
-        for a in tree.css(".moj-sub-navigation a")
-    ]
+    tabs = []
+    for a in tree.css(".moj-sub-navigation a"):
+        url = a.attrs.get("href", "")
+        if not url:
+            raise ValueError("Tab link does not have href")
+        tabs.append(OrganisationTab(name=a.text(strip=True), url=url))
 
     return OrganisationDetail(
         organisation_id=org_dict.get("Organisation reference", ""),
@@ -279,6 +287,8 @@ def _parse_output_data_tasks(html: str, organisation_id: str) -> OutputDataTaskL
             continue
         link = cells[0].css_first("a")
         url = link.attrs.get("href", "") if link else ""
+        if not url:
+            raise ValueError("Task link does not have href")
         # Extract task ID from /Output/{uuid}/...
         task_id = ""
         url_parts = url.split("/")
@@ -306,6 +316,8 @@ def _parse_station_declaration_tasks(html: str, organisation_id: str) -> Station
             continue
         link = cells[0].css_first("a")
         url = link.attrs.get("href", "") if link else ""
+        if not url:
+            raise ValueError("Station declaration task link does not have href")
         tasks.append(StationDeclarationTask(
             declaration_type=cells[0].text(strip=True),
             year=cells[1].text(strip=True),
@@ -324,6 +336,8 @@ def _parse_organisation_stations(html: str, organisation_id: str) -> Organisatio
             continue
         link = cells[1].css_first("a")
         url = link.attrs.get("href", "") if link else ""
+        if not url:
+            raise ValueError("Organisation station link does not have href")
         station_id = url.split("/Stations/")[-1] if url else ""
         statuses = [t.text(strip=True) for t in cells[5].css("strong")]
         stations.append(OrganisationStation(
@@ -473,6 +487,11 @@ def _parse_certificates_overview(html: str, organisation_id: str) -> Certificate
         breakdown_url = links[0].attrs.get("href", "") if len(links) > 0 else ""
         history_url = links[1].attrs.get("href", "") if len(links) > 1 else ""
 
+        if not breakdown_url:
+            raise ValueError("Certificate breakdown link does not have href")
+        if not history_url:
+            raise ValueError("Certificate history link does not have href")
+
         summaries.append(CertificateTypeSummary(
             cert_type=cert_type,
             issued=issued,
@@ -516,6 +535,8 @@ def _parse_certificate_history(html: str, organisation_id: str, cert_type: str) 
             continue
         month_link = cells[0].css_first("a")
         month_url = month_link.attrs.get("href", "") if month_link else ""
+        if not month_url:
+            raise ValueError("Certificate history month link does not have href")
         try:
             transferred_in = int(cells[1].text(strip=True).replace(",", ""))
         except ValueError:
