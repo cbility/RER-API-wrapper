@@ -345,6 +345,65 @@ class RER_wrapper:
         post_resp.raise_for_status()
         return rer_parsing._parse_find_organisation(post_resp.text)
 
+    def transfer_certificates(
+        self,
+        organisation_id: str,
+        recipient_organisation_id: str,
+        cert_type: str = "REGO",
+    ) -> None:
+        """POST /Organisations/{organisationId}/Certificates/{certType}/ConfirmOrganisation/{recipientOrganisationId}
+        Transfers selected certificates to the recipient organisation.
+
+        NOT IMPLEMENTED — raises NotImplementedError when called.
+
+        TODO: Figure out how to select certificates before confirmation. This is likely a
+              separate POST to a SelectCertificates (or similar) endpoint that must be
+              called first. Inspect network traffic on the certificate selection page to
+              identify the request payload (probably certificate IDs / ranges).
+        TODO: The ConfirmOrganisation POST uses multipart/form-data with only a CSRF token
+              as its body. Verify whether any additional hidden fields appear in the form
+              (e.g. quantity, period) by checking the HTML of the confirmation page.
+        TODO: Determine the full transfer flow in order:
+                1. GET  .../FindOrganisation          → already implemented
+                2. POST .../FindOrganisation          → already implemented (find_organisation)
+                3. POST .../SelectCertificates (?)    → unknown payload, needs investigation
+                4. GET  .../ConfirmOrganisation/{id}  → scrape CSRF token from this page
+                5. POST .../ConfirmOrganisation/{id}  → this method (stub below)
+        TODO: Add a response type — the confirmation page likely shows a success banner
+              or a summary of what was transferred. Parse and return it.
+        TODO: Consider adding a dry_run parameter that stops before the final POST.
+        """
+        raise NotImplementedError(
+            "transfer_certificates is not yet implemented. "
+            "The certificate selection step (step 3 in the transfer flow) has not been "
+            "investigated. Do not call this method until the full flow is understood."
+        )
+
+        # --- stub implementation (unreachable until NotImplementedError is removed) ---
+
+        # TODO: Replace with actual certificate selection POST (step 3)
+        # select_resp = self.session.post(
+        #     self.base_url + f"Organisations/{organisation_id}/Certificates/{cert_type}/SelectCertificates",
+        #     data={ ... },  # unknown — needs investigation
+        # )
+        # select_resp.raise_for_status()
+
+        # Step 4: GET the confirmation page to obtain a fresh CSRF token
+        get_resp = self._request(
+            f"Organisations/{organisation_id}/Certificates/{cert_type}/ConfirmOrganisation/{recipient_organisation_id}"
+        )
+        token_el = HTMLParser(get_resp.text).css_first("input[name=__RequestVerificationToken]")
+        csrf = token_el.attrs.get("value", "") if token_el else ""
+
+        # Step 5: POST the confirmation (multipart/form-data, CSRF only)
+        post_resp = self.session.post(
+            self.base_url + f"Organisations/{organisation_id}/Certificates/{cert_type}/ConfirmOrganisation/{recipient_organisation_id}",
+            files={"__RequestVerificationToken": (None, csrf)},  # multipart/form-data
+        )
+        post_resp.raise_for_status()
+
+        # TODO: Parse and return the confirmation response
+
     def get_organisation_certificates(self, organisation_id: str) -> rer_parsing.CertificatesOverview:
         """GET /Organisations/{organisationId}/Certificates - Returns certificates overview."""
         response = self._request(f"Organisations/{organisation_id}/Certificates")
