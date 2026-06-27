@@ -1,7 +1,5 @@
 # region imports
 
-from dotenv import load_dotenv # for loading environment variables from .env file
-import os # for retrieving environment variables
 import logging # for logging
 
 import requests # lighttweight web requests
@@ -37,7 +35,7 @@ RER_DEFAULT_HEADERS = {
 # region class
 
 class RER_wrapper:
-    """Wrapper for authenticating with RER portal and making authenticated requests.
+    """Wrapper for making authenticated requests to the RER portal.
     
     Params:
         auth_cookies: dict of cookies to use for authentication.
@@ -45,9 +43,6 @@ class RER_wrapper:
     """
     session: requests.Session
     base_url="https://rer.ofgem.gov.uk/"
-    __user_email: str | None = None
-    __user_full_name: str | None = None
-    __user_password: str | None = None
 
     def __init__(self, auth_cookies: dict, headers: dict = RER_DEFAULT_HEADERS):
         self.auth_cookies = auth_cookies
@@ -66,33 +61,23 @@ class RER_wrapper:
         """Authenticate with RER portal and set session.
 
         Creates a session with the provided cookies. 
-        Throws an error if cookies are not provided, or the created session is invalid.
+        Throws an error if cookies are not provided.
         """
+
+        if not auth_cookies:
+            raise ValueError("Authentication cookies must be provided.")
 
         session = requests.Session()
         session.headers.update(headers)
+        session.cookies.update(auth_cookies)
+        self.session = session
 
-        if auth_cookies:
-            session.cookies.update(auth_cookies)
-            self.session = session
-            try:
-                # test session
-                user = self.get_user()
-                self.__user_email = user["email"]
-                self.__user_full_name = user["full_name"]
-                log.info(f"Authenticated as {self.__user_email} ({self.__user_full_name}) using stored cookies.")
-                return
-            except requests.exceptions.ConnectionError as e:
-                log.warning(f"Assuming stored cookies are invalid: {e}. Re-authenticating...")
-        else:
-            log.debug("No stored cookies, authenticating...")
+        try:
+            user = self.get_user()
+        except requests.exceptions.ConnectionError as e:
+            raise ValueError("Authentication cookies could not be validated.") from e
 
-        # no cookies provided or session invalid - authenticate via browser automation
-        if not self.__user_email:
-            raise ValueError("Email must be provided for authentication if cookies are not provided or invalid.")
-        if not self.__user_password:
-            raise ValueError("Password must be provided for authentication if cookies are not provided or invalid.")
-        raise NotImplementedError("Browser authentication is not implemented in this version.")
+        log.info(f"Authenticated as {user['email']} ({user['full_name']}) using provided cookies.")
     
 
     def _request(self, endpoint: str, method: str = "GET", **kwargs) -> requests.Response:
@@ -273,20 +258,10 @@ if __name__ == "__main__":
         except FileNotFoundError: 
             raise FileNotFoundError(f"Cookies file not found at {cookies_file}. Please authenticate to create it.")
 
-    # Load environment variables from .env file
-    load_dotenv()
-
-    if not os.getenv("RER_EMAIL") or not os.getenv("RER_PASSWORD"):
-        raise ValueError("Please set RER_EMAIL and RER_PASSWORD environment variables in .env file")
-
     logging.basicConfig(level=logging.DEBUG) # debug logging for testing
 
     cookies = _load_cookies()
-    if cookies:
-        log.debug("Loaded cookies from file")
-    else:
-        log.debug("No cookies found in file, will authenticate via browser")
-
+    log.debug("Loaded cookies from file")
     rer = RER_wrapper(auth_cookies=cookies)
 
 
