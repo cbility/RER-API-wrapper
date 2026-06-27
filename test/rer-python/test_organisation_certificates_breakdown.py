@@ -1,10 +1,11 @@
 """Tests for RER_wrapper.get_organisation_certificates_breakdown() - GET /Organisations/{id}/Certificates/{type}/Breakdown"""
 import os
 import json
+from dataclasses import asdict
 import pytest
 
 from rer_api_wrapper import RER_wrapper
-from rer_api_wrapper.models import CertificateBreakdown, to_dict
+from rer_api_wrapper.models import CertificateBreakdown
 
 
 COOKIES_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'rer_cookies.json')
@@ -73,8 +74,8 @@ def test_roc_items_is_list(roc_breakdown):
 
 
 def test_print_raw_rego(rego_breakdown):
-    print(json.dumps(to_dict(rego_breakdown), indent=2))
+    print(json.dumps(rego_breakdown, default=asdict, indent=2))
 
 
 def test_print_raw_roc(roc_breakdown):
-    print(json.dumps(to_dict(roc_breakdown), indent=2))
+    print(json.dumps(roc_breakdown, default=asdict, indent=2))

@@ -1,10 +1,11 @@
 """Tests for RER_wrapper.get_organisation_certificates() - GET /Organisations/{id}/Certificates"""
 import os
 import json
+from dataclasses import asdict
 import pytest
 
 from rer_api_wrapper import RER_wrapper
-from rer_api_wrapper.models import CertificatesOverview, to_dict
+from rer_api_wrapper.models import CertificatesOverview
 
 
 COOKIES_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'rer_cookies.json')
@@ -57,4 +58,4 @@ def test_each_summary_has_fields(overview):
 
 
 def test_print_raw(overview):
-    print(json.dumps(to_dict(overview), indent=2))
+    print(json.dumps(overview, default=asdict, indent=2))

@@ -1,11 +1,12 @@
 """Tests for RER_wrapper.get_organisation_station_declarations() - GET /Organisations/{id}/Tasks/StationDeclarations"""
 import os
 import json
+from dataclasses import asdict
 import pytest
 import re
 
 from rer_api_wrapper import RER_wrapper
-from rer_api_wrapper.models import StationDeclarationTaskList, to_dict
+from rer_api_wrapper.models import StationDeclarationTaskList
 
 
 COOKIES_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'rer_cookies.json')
@@ -50,7 +51,7 @@ def test_each_task_has_required_fields(declarations):
 
 
 def test_print_raw(declarations):
-    print(json.dumps(to_dict(declarations), indent=2))
+    print(json.dumps(declarations, default=asdict, indent=2))
 
 
 def test_year_format(declarations):

@@ -1,10 +1,10 @@
 """Tests for RER_wrapper.get_user_organisations() - GET /User (all pages)"""
 import os
 import json
+from dataclasses import asdict
 import pytest
 
 from rer_api_wrapper import RER_wrapper
-from rer_api_wrapper.models import to_dict
 
 
 COOKIES_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'rer_cookies.json')
@@ -42,4 +42,4 @@ def test_each_organisation_has_required_fields(organisations):
 
 
 def test_print_raw(organisations):
-    print(json.dumps(to_dict(organisations), indent=2))
+    print(json.dumps(organisations, default=asdict, indent=2))

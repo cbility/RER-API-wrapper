@@ -1,10 +1,11 @@
 """Tests for RER_wrapper.get_organisation_stations() - GET /Organisations/{id}/Stations"""
 import os
 import json
+from dataclasses import asdict
 import pytest
 
 from rer_api_wrapper import RER_wrapper
-from rer_api_wrapper.models import OrganisationStationList, to_dict
+from rer_api_wrapper.models import OrganisationStationList
 
 
 COOKIES_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'rer_cookies.json')
@@ -60,4 +61,4 @@ def test_station_ids_are_uuids(stations):
 
 
 def test_print_raw(stations):
-    print(json.dumps(to_dict(stations), indent=2))
+    print(json.dumps(stations, default=asdict, indent=2))

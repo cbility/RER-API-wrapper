@@ -1,10 +1,11 @@
 """Tests for RER_wrapper.find_organisation() - POST /Organisations/{id}/Certificates/{certType}/FindOrganisation"""
 import os
 import json
+from dataclasses import asdict
 import pytest
 
 from rer_api_wrapper import RER_wrapper
-from rer_api_wrapper.models import OrganisationSearchResult, to_dict
+from rer_api_wrapper.models import OrganisationSearchResult
 
 
 COOKIES_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'rer_cookies.json')
@@ -54,4 +55,4 @@ def test_miss_returns_none(miss):
 
 
 def test_hit_print_raw(hit):
-    print(json.dumps(to_dict(hit), indent=2))
+    print(json.dumps(hit, default=asdict, indent=2))

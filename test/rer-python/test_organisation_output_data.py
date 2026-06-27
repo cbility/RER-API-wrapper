@@ -1,11 +1,12 @@
 """Tests for RER_wrapper.get_organisation_output_data() - GET /Organisations/{id}/Tasks/OutputData"""
 import os
 import json
+from dataclasses import asdict
 import pytest
 import re
 
 from rer_api_wrapper import RER_wrapper
-from rer_api_wrapper.models import OutputDataTaskList, to_dict
+from rer_api_wrapper.models import OutputDataTaskList
 
 
 COOKIES_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'rer_cookies.json')
@@ -56,7 +57,7 @@ def test_each_task_has_required_fields(output_data):
 
 
 def test_print_raw(output_data):
-    print(json.dumps(to_dict(output_data), indent=2))
+    print(json.dumps(output_data, default=asdict, indent=2))
 
 
 def test_task_ids_are_uuids(output_data):

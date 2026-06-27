@@ -1,10 +1,11 @@
 """Tests for RER_wrapper.get_user() - GET /User"""
 import os
 import json
+from dataclasses import asdict
 import pytest
 
 from rer_api_wrapper import RER_wrapper
-from rer_api_wrapper.models import User, to_dict
+from rer_api_wrapper.models import User
 
 
 COOKIES_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'rer_cookies.json')
@@ -45,4 +46,4 @@ def test_outstanding_tasks_is_non_negative_int(user):
     assert user.outstanding_tasks >= 0
 
 def test_print_raw(user):
-    print(json.dumps(to_dict(user), indent=2))
+    print(json.dumps(user, default=asdict, indent=2))

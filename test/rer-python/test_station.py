@@ -1,10 +1,11 @@
 """Tests for RER_wrapper.get_station() - GET /Organisations/Stations/{stationId}"""
 import os
 import json
+from dataclasses import asdict
 import pytest
 
 from rer_api_wrapper import RER_wrapper
-from rer_api_wrapper.models import StationDetail, to_dict
+from rer_api_wrapper.models import StationDetail
 
 
 COOKIES_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'rer_cookies.json')
@@ -94,4 +95,4 @@ def test_each_capacity_has_required_fields(station):
 
 
 def test_print_raw(station):
-    print(json.dumps(to_dict(station), indent=2))
+    print(json.dumps(station, default=asdict, indent=2))

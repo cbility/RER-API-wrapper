@@ -1,10 +1,11 @@
 """Tests for RER_wrapper.get_organisation() - GET /Organisations/OrganisationReview/{id}"""
 import os
 import json
+from dataclasses import asdict
 import pytest
 
 from rer_api_wrapper import RER_wrapper
-from rer_api_wrapper.models import OrganisationDetail, to_dict
+from rer_api_wrapper.models import OrganisationDetail
 
 
 COOKIES_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'rer_cookies.json')
@@ -78,4 +79,4 @@ def test_tabs_include_overview(organisation):
 
 
 def test_print_raw(organisation):
-    print(json.dumps(to_dict(organisation), indent=2))
+    print(json.dumps(organisation, default=asdict, indent=2))
