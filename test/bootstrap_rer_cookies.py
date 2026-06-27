@@ -17,7 +17,7 @@ from typing import NotRequired, TypedDict
 from dotenv import load_dotenv
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
-from googleapiclient.discovery import build
+from googleapiclient.discovery import build # type: ignore
 from playwright.sync_api import sync_playwright
 
 
@@ -201,7 +201,7 @@ def browser_authenticate_rer(
             page.wait_for_url("https://rer.ofgem.gov.uk/**", timeout=300000)
             cookies = page.context.cookies()
             assert  all("name" in cookie and "value" in cookie for cookie in cookies), "Unexpected cookie format - missing name or value"
-            return {cookie["name"]: cookie["value"] for cookie in cookies} # type: ignore - checked above
+            return {cookie["name"]: cookie["value"] for cookie in cookies} # type: ignore
         finally:
             browser.close()
 
