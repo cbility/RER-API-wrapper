@@ -19,3 +19,7 @@ dev = [
     "google-auth>=2.27.0",
     "google-api-python-client>=2.111.0",
 ]
+
+[tool.mypy]
+python_version = "3.12"
+mypy_path = ["src"]

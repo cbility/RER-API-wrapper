@@ -48,7 +48,7 @@ See `openapi.yaml` for complete endpoint documentation.
 ```python
 import requests
 from auth import load_cookies, cookies_to_dict
-from bs4 import BeautifulSoup
+from selectolax.parser import HTMLParser
 
 # Setup authenticated session
 cookies = load_cookies()
@@ -63,7 +63,7 @@ response = session.get(
 )
 
 # Parse HTML to extract data
-soup = BeautifulSoup(response.text, 'html.parser')
+tree = HTMLParser(response.text)
 # ... extract task information from HTML
 ```
 
