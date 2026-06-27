@@ -1,23 +1,35 @@
 [project]
 name = "rer-api-wrapper"
 version = "0.1.0"
-description = "Add your description here"
+description = "Automation-friendly API wrapper for the Renewable Electricity Register."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "pydantic>=2.0",
     "python-dotenv>=1.2.1",
     "requests>=2.32.5",
     "selectolax>=0.4.7",
     "types-requests>=2.33.0.20260518",
 ]
 
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+rer_api_wrapper = ["py.typed"]
+
 [dependency-groups]
 dev = [
-    "pytest>=9.0.2",
-    "playwright>=1.58.0",
-    "google-auth-oauthlib>=1.2.0",
     "google-auth>=2.27.0",
     "google-api-python-client>=2.111.0",
+    "google-auth-oauthlib>=1.2.0",
+    "mypy>=1.19.1",
+    "playwright>=1.58.0",
+    "pytest>=9.0.2",
 ]
 
 [tool.mypy]

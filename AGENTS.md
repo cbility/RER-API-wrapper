@@ -2,7 +2,8 @@
 
 ## Repo Shape
 - Python 3.12 repo managed with `uv`.
-- Library code lives directly in `src/rer.py` and `src/rer_parsing.py`; tests import them by adding `src/` to `sys.path`.
+- Importable package code lives in `src/rer_api_wrapper/`; the public wrapper is `RER_wrapper` and the thin service facade is `RERService`.
+- Response contracts are Pydantic dataclasses in `src/rer_api_wrapper/models.py`; prefer attributes over dict subscripting in new code.
 - `test/rer-python/` is live integration coverage against `rer.ofgem.gov.uk`, not offline unit tests.
 - `test/rer-html/` are helper scripts that fetch and save HTML fixtures; they write `*.html` files that are ignored.
 
@@ -10,6 +11,7 @@
 - Install deps: `uv sync`
 - Run all tests: `uv run pytest`
 - Run one test file: `uv run pytest test/rer-python/test_user.py`
+- Type-check with the repo venv: `.venv/bin/python -m mypy src test/rer-python test/rer-html`
 - Regenerate cookies: `uv run python test/bootstrap_rer_cookies.py`
 
 ## Live Test Rules
@@ -23,5 +25,5 @@
 - Saved cookies strip `ai_` tracking cookies before writing `rer_cookies.json`.
 
 ## Notes
-- The public wrapper is `RER_wrapper` in `src/rer.py`.
-- Most parsers return `TypedDict` shapes from `src/rer_parsing.py`; preserve those field names when editing.
+- The package is installable from Git via `pyproject.toml`; keep import paths under `rer_api_wrapper` and avoid test-only `sys.path` hacks.
+- Parser field names are the JSON API contract; preserve them when editing models or parsers.

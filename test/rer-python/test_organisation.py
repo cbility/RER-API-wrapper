@@ -1,12 +1,10 @@
 """Tests for RER_wrapper.get_organisation() - GET /Organisations/OrganisationReview/{id}"""
-import sys
 import os
 import json
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
-
-from rer import RER_wrapper
+from rer_api_wrapper import RER_wrapper
+from rer_api_wrapper.models import OrganisationDetail, to_dict
 
 
 COOKIES_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'rer_cookies.json')
@@ -21,7 +19,7 @@ def wrapper():
 
 @pytest.fixture(scope="module")
 def first_org_id(wrapper):
-    return wrapper.get_user_organisations()[0]["organisation_id"]
+    return wrapper.get_user_organisations()[0].organisation_id
 
 
 @pytest.fixture(scope="module")
@@ -30,7 +28,7 @@ def organisation(wrapper, first_org_id):
 
 
 def test_returns_dict(organisation):
-    assert isinstance(organisation, dict)
+    assert isinstance(organisation, OrganisationDetail)
 
 
 def test_organisation_id_matches_requested(organisation, first_org_id):
@@ -80,5 +78,4 @@ def test_tabs_include_overview(organisation):
 
 
 def test_print_raw(organisation):
-    print(json.dumps(organisation, indent=2))
-
+    print(json.dumps(to_dict(organisation), indent=2))

@@ -1,12 +1,10 @@
 """Tests for RER_wrapper.get_station() - GET /Organisations/Stations/{stationId}"""
-import sys
 import os
 import json
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
-
-from rer import RER_wrapper
+from rer_api_wrapper import RER_wrapper
+from rer_api_wrapper.models import StationDetail, to_dict
 
 
 COOKIES_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'rer_cookies.json')
@@ -27,7 +25,7 @@ def station(wrapper):
 
 
 def test_returns_dict(station):
-    assert isinstance(station, dict)
+    assert isinstance(station, StationDetail)
 
 
 def test_station_id_matches(station):
@@ -96,4 +94,4 @@ def test_each_capacity_has_required_fields(station):
 
 
 def test_print_raw(station):
-    print(json.dumps(station, indent=2))
+    print(json.dumps(to_dict(station), indent=2))

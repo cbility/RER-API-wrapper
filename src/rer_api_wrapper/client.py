@@ -10,7 +10,7 @@ import json # for saving cookies
 import re # for pagination parsing
 import math # for pagination calculation
 
-import rer_parsing as rer_parsing
+from rer_api_wrapper import parsing as rer_parsing
 
 # endregion imports
 
@@ -77,7 +77,7 @@ class RER_wrapper:
         except requests.exceptions.ConnectionError as e:
             raise ValueError("Authentication cookies could not be validated.") from e
 
-        log.info(f"Authenticated as {user['email']} ({user['full_name']}) using provided cookies.")
+        log.info(f"Authenticated as {user.email} ({user.full_name}) using provided cookies.")
     
 
     def _request(self, endpoint: str, method: str = "GET", **kwargs) -> requests.Response:
@@ -266,4 +266,3 @@ if __name__ == "__main__":
 
 
 # endregion testing
-

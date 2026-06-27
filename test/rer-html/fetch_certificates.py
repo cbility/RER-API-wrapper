@@ -1,7 +1,5 @@
 """Fetch and save HTML from certificate-related endpoints for org GEN0202802."""
 import os
-import sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 
 from _auth import get_wrapper
 

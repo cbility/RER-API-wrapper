@@ -1,12 +1,10 @@
 """Tests for RER_wrapper.find_organisation() - POST /Organisations/{id}/Certificates/{certType}/FindOrganisation"""
-import sys
 import os
 import json
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
-
-from rer import RER_wrapper
+from rer_api_wrapper import RER_wrapper
+from rer_api_wrapper.models import OrganisationSearchResult, to_dict
 
 
 COOKIES_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'rer_cookies.json')
@@ -36,7 +34,7 @@ def miss(wrapper):
 
 
 def test_hit_returns_dict(hit):
-    assert isinstance(hit, dict)
+    assert isinstance(hit, OrganisationSearchResult)
 
 
 def test_hit_reference_matches(hit):
@@ -56,4 +54,4 @@ def test_miss_returns_none(miss):
 
 
 def test_hit_print_raw(hit):
-    print(json.dumps(hit, indent=2))
+    print(json.dumps(to_dict(hit), indent=2))

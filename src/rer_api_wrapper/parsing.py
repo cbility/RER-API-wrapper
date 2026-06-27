@@ -1,167 +1,29 @@
-from typing import TypedDict, Optional #typing
+from typing import Optional
 from selectolax.parser import HTMLParser # for parsing HTML
-
-# region types
-
-class OrganisationSummary(TypedDict):
-    organisation_id: str
-    name: str
-    type: str
-    task_count: int
-    status: str
-    user_status: str
-
-class User(TypedDict):
-    email: str
-    full_name: str
-    outstanding_tasks: int
-    active_organisations: int
-
-
-class OrganisationAddress(TypedDict):
-    name: str
-    address: str
-
-class OrganisationContact(TypedDict):
-    name: str
-    email: str
-
-class OrganisationTab(TypedDict):
-    name: str
-    url: str
-
-class OrganisationDetail(TypedDict):
-    organisation_id: str
-    name: str
-    type: str
-    status: str
-    address: OrganisationAddress
-    contact: OrganisationContact
-    tabs: list[OrganisationTab]
-
-class OutputDataTask(TypedDict):
-    task_id: str
-    period: str
-    station_name: str
-    status: str
-    url: str
-
-class OutputDataTaskList(TypedDict):
-    organisation_id: str
-    tasks: list[OutputDataTask]
-
-class StationDeclarationTask(TypedDict):
-    declaration_type: str
-    year: str
-    url: str
-
-class StationDeclarationTaskList(TypedDict):
-    organisation_id: str
-    tasks: list[StationDeclarationTask]
-
-class OrganisationStation(TypedDict):
-    station_id: str
-    station_name: str
-    organisation_name: str
-    country: str
-    technology_group: str
-    statuses: list[str]
-    last_updated: str
-    url: str
-
-class OrganisationStationList(TypedDict):
-    organisation_id: str
-    stations: list[OrganisationStation]
-
-class SchemeAccreditation(TypedDict):
-    scheme: str
-    accreditation_reference: str
-    application_date: str
-    effective_from: str
-    status: str
-
-class StationCapacity(TypedDict):
-    capacity_type: str
-    commissioning_date: str
-    date_added: str
-    tic: str
-    dnc: str
-
-class StationDetail(TypedDict):
-    station_id: str
-    station_name: str
-    organisation_name: str
-    country: str
-    # Key facts
-    commissioning_date: str
-    total_installed_capacity: str
-    technology_group: str
-    prelim_approval: str
-    # Location
-    address: str
-    grid_reference: str
-    # Technical
-    application_date: str
-    declared_net_capacity: str
-    roofit_technology: str
-    rego_technology: str
-    # Station layout
-    connected_to_network: str
-    will_export: str
-    export_connection_capacity: str
-    # Description
-    station_description: str
-    has_battery_storage: str
-    has_standby_generator: str
-    # Scheme
-    scheme: str
-    rego_accredited: str
-    output_submission_frequency: str
-    # Tables
-    scheme_accreditations: list[SchemeAccreditation]
-    station_capacities: list[StationCapacity]
-
-class OrganisationSearchResult(TypedDict):
-    reference: str
-    name: str
-
-class CertificateTypeSummary(TypedDict):
-    cert_type: str
-    issued: int
-    balance: Optional[int]
-    breakdown_url: str
-    history_url: str
-
-class CertificatesOverview(TypedDict):
-    organisation_id: str
-    balance_period: str
-    summaries: list[CertificateTypeSummary]
-
-class CertificateBreakdownItem(TypedDict):
-    action: str
-    country: str
-    station: str
-    technology: str
-    output_period: str
-    count: int
-
-class CertificateBreakdown(TypedDict):
-    organisation_id: str
-    cert_type: str
-    items: list[CertificateBreakdownItem]
-
-class CertificateHistoryMonth(TypedDict):
-    month: str
-    month_url: str
-    transferred_in: int
-    transferred_out: int
-
-class CertificateHistory(TypedDict):
-    organisation_id: str
-    cert_type: str
-    months: list[CertificateHistoryMonth]
-
-# endregion types
+from rer_api_wrapper.models import (
+    CertificateBreakdown,
+    CertificateBreakdownItem,
+    CertificateHistory,
+    CertificateHistoryMonth,
+    CertificatesOverview,
+    CertificateTypeSummary,
+    OrganisationAddress,
+    OrganisationContact,
+    OrganisationDetail,
+    OrganisationSearchResult,
+    OrganisationStation,
+    OrganisationStationList,
+    OrganisationSummary,
+    OrganisationTab,
+    OutputDataTask,
+    OutputDataTaskList,
+    SchemeAccreditation,
+    StationCapacity,
+    StationDeclarationTask,
+    StationDeclarationTaskList,
+    StationDetail,
+    User,
+)
 
 
 # region parsers

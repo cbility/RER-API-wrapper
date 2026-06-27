@@ -1,12 +1,10 @@
 """Tests for RER_wrapper.get_organisation_certificates() - GET /Organisations/{id}/Certificates"""
-import sys
 import os
 import json
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
-
-from rer import RER_wrapper
+from rer_api_wrapper import RER_wrapper
+from rer_api_wrapper.models import CertificatesOverview, to_dict
 
 
 COOKIES_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'rer_cookies.json')
@@ -30,7 +28,7 @@ def overview(wrapper):
 
 
 def test_returns_dict(overview):
-    assert isinstance(overview, dict)
+    assert isinstance(overview, CertificatesOverview)
 
 
 def test_organisation_id(overview):
@@ -59,4 +57,4 @@ def test_each_summary_has_fields(overview):
 
 
 def test_print_raw(overview):
-    print(json.dumps(overview, indent=2))
+    print(json.dumps(to_dict(overview), indent=2))

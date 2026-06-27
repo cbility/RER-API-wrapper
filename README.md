@@ -1,6 +1,6 @@
 # RER API Wrapper
 
-Python wrapper for the Ofgem Renewable Electricity Register (RER) portal API. Provides a REST API that wraps the site's native HTML API and accepts and returns JSON objects. Also provides an OpenAPI schema for the wrapper.
+Python package for wrapping the Ofgem Renewable Electricity Register (RER) portal. The RER site returns HTML, so this package handles authenticated requests, parses the relevant pages, and returns typed Python objects ready to serialize as JSON from an AWS Lambda/API Gateway wrapper.
 
 ## Installation
 
@@ -8,35 +8,33 @@ Python wrapper for the Ofgem Renewable Electricity Register (RER) portal API. Pr
 uv sync
 ```
 
+Install from Git in another repo with:
+
+```bash
+uv add git+https://github.com/ORG/RER-API-wrapper.git
+```
+
 ## Getting started
 
-To use the API you will need to authenticate with the RER portal and provide the cookies from the authenticated session. There are a few ways to go about doing this - please see the Authenticating section below for some examples
+To use the package you need authenticated RER cookies. The helper script at `test/bootstrap_rer_cookies.py` can regenerate local cookies for development.
 
 
 ### Make API Calls
 
 ```python
-import requests
-from auth import load_cookies, cookies_to_dict
+import json
 
-# Load saved cookies
-cookies = load_cookies("rer_cookies.json")
-cookie_dict = cookies_to_dict(cookies)
+from rer_api_wrapper import RERService
+from rer_api_wrapper.models import to_dict
 
-# Make authenticated requests
-session = requests.Session()
-session.cookies.update(cookie_dict)
+cookies = {"cookie-name": "cookie-value"}
+service = RERService(auth_cookies=cookies)
 
-# Get user dashboard
-response = session.get('https://rer.ofgem.gov.uk/User')
-print(response.text)  # HTML page content
+user = service.get_user()
+print(json.dumps(to_dict(user), indent=2))
 ```
 
-## API Endpoints
-
-See `openapi.yaml` for complete endpoint documentation.
-
-### Key Endpoints:
+## Wrapped Endpoints
 
 - `GET /User` - User dashboard
 - `GET /User/Activity` - User activity log
@@ -46,25 +44,13 @@ See `openapi.yaml` for complete endpoint documentation.
 ## Example: Get Organisation Tasks
 
 ```python
-import requests
-from auth import load_cookies, cookies_to_dict
-from selectolax.parser import HTMLParser
+from rer_api_wrapper import RERService
 
-# Setup authenticated session
-cookies = load_cookies()
-session = requests.Session()
-session.cookies.update(cookies_to_dict(cookies))
+cookies = {"cookie-name": "cookie-value"}
+service = RERService(auth_cookies=cookies)
 
-# Get tasks page
 org_id = "GEN0215941"
-response = session.get(
-    f'https://rer.ofgem.gov.uk/Organisations/{org_id}/Tasks/OutputData',
-    params={'Statuses': 'Draft'}
-)
-
-# Parse HTML to extract data
-tree = HTMLParser(response.text)
-# ... extract task information from HTML
+tasks = service.get_organisation_output_data_tasks(org_id)
 ```
 
 ## Security

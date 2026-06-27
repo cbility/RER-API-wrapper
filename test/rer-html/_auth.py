@@ -1,13 +1,9 @@
 """Shared cookie authentication helper for HTML-fetching scripts."""
-import sys
 import os
 import json
 import logging
 
-# Add src/ to path so rer.py can be imported
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
-
-from rer import RER_wrapper
+from rer_api_wrapper import RER_wrapper
 
 logging.basicConfig(level=logging.INFO)
 

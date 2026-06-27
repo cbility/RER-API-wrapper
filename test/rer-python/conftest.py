@@ -1,14 +1,11 @@
 """Shared setup for live RER integration tests."""
 import json
 import os
-import sys
 
 import pytest
 import requests
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
-
-from rer import RER_wrapper
+from rer_api_wrapper import RER_wrapper
 
 
 COOKIES_FILE = os.path.join(os.path.dirname(__file__), "..", "..", "rer_cookies.json")

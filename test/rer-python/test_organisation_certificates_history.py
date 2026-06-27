@@ -1,13 +1,11 @@
 """Tests for RER_wrapper.get_organisation_certificates_history() - GET /Organisations/{id}/Certificates/{type}/History"""
-import sys
 import os
 import json
 import pytest
 
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
-
-from rer import RER_wrapper
+from rer_api_wrapper import RER_wrapper
+from rer_api_wrapper.models import CertificateHistory, to_dict
 
 
 COOKIES_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'rer_cookies.json')
@@ -35,7 +33,7 @@ def roc_history(wrapper):
 
 
 def test_rego_returns_dict(rego_history):
-    assert isinstance(rego_history, dict)
+    assert isinstance(rego_history, CertificateHistory)
 
 
 def test_rego_organisation_id(rego_history):
@@ -63,7 +61,7 @@ def test_rego_each_month_has_fields(rego_history):
 
 
 def test_roc_returns_dict(roc_history):
-    assert isinstance(roc_history, dict)
+    assert isinstance(roc_history, CertificateHistory)
 
 
 def test_roc_cert_type(roc_history):
@@ -75,8 +73,8 @@ def test_roc_months_is_list(roc_history):
 
 
 def test_print_raw_rego(rego_history):
-    print(json.dumps(rego_history, indent=2))
+    print(json.dumps(to_dict(rego_history), indent=2))
 
 
 def test_print_raw_roc(roc_history):
-    print(json.dumps(roc_history, indent=2))
+    print(json.dumps(to_dict(roc_history), indent=2))
