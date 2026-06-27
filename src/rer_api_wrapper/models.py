@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import Any, cast
+
 from pydantic.dataclasses import dataclass
 
 
@@ -7,14 +11,13 @@ class RERModel:
         return getattr(self, key)
 
 
-def to_dict(value):
-    from dataclasses import asdict, is_dataclass
-
-    if is_dataclass(value):
-        return asdict(value)
-    if isinstance(value, list):
-        return [to_dict(item) for item in value]
-    return value
+@dataclass
+class RERRequest(RERModel):
+    method: str
+    path: str
+    query: dict[str, Any]
+    body: dict[str, Any]
+    cookies: dict[str, str]
 
 
 @dataclass
