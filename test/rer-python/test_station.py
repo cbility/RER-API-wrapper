@@ -1,15 +1,11 @@
 """Tests for RER_wrapper.get_station() - GET /Organisations/Stations/{stationId}"""
-import sys
 import os
 import json
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+from rer_api_wrapper import RER_wrapper
+from rer_api_wrapper.models import StationDetail, to_dict
 
-from dotenv import load_dotenv
-from rer import RER_wrapper
-
-load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
 
 COOKIES_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'rer_cookies.json')
 
@@ -20,11 +16,7 @@ STATION_ID = "075B874C-0558-4C39-835B-69B6C84F4595"
 def wrapper():
     with open(COOKIES_FILE) as f:
         cookies = json.load(f)
-    return RER_wrapper(
-        cookies=cookies,
-        user_email=os.getenv("RER_EMAIL"),
-        user_password=os.getenv("RER_PASSWORD"),
-    )
+    return RER_wrapper(auth_cookies=cookies)
 
 
 @pytest.fixture(scope="module")
@@ -33,7 +25,7 @@ def station(wrapper):
 
 
 def test_returns_dict(station):
-    assert isinstance(station, dict)
+    assert isinstance(station, StationDetail)
 
 
 def test_station_id_matches(station):
@@ -102,4 +94,4 @@ def test_each_capacity_has_required_fields(station):
 
 
 def test_print_raw(station):
-    print(json.dumps(station, indent=2))
+    print(json.dumps(to_dict(station), indent=2))

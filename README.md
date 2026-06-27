@@ -1,69 +1,40 @@
 # RER API Wrapper
 
-Python wrapper for the Ofgem Renewable Electricity Register (RER) portal.
+Python package for wrapping the Ofgem Renewable Electricity Register (RER) portal. The RER site returns HTML, so this package handles authenticated requests, parses the relevant pages, and returns typed Python objects ready to serialize as JSON from an AWS Lambda/API Gateway wrapper.
 
 ## Installation
 
 ```bash
-pip install playwright requests beautifulsoup4
-playwright install chromium
+uv sync
 ```
 
-## Quick Start
+Install from Git in another repo with:
 
-### 1. Authenticate (First Time)
+```bash
+uv add git+https://github.com/ORG/RER-API-wrapper.git
+```
+
+## Getting started
+
+To use the package you need authenticated RER cookies. The helper script at `test/bootstrap_rer_cookies.py` can regenerate local cookies for development.
+
+
+### Make API Calls
 
 ```python
-from auth import authenticate_rer
+import json
 
-# Login and save cookies
-cookies = authenticate_rer(
-    email="your.email@example.com",
-    password="your_password"
-)
+from rer_api_wrapper import RERService
+from rer_api_wrapper.models import to_dict
 
-# You'll need to manually enter your MFA code in the browser
-# Cookies are saved to rer_cookies.json for reuse
+cookies = {"cookie-name": "cookie-value"}
+service = RERService(auth_cookies=cookies)
+
+user = service.get_user()
+print(json.dumps(to_dict(user), indent=2))
 ```
 
-### 2. Make API Calls
-
-```python
-import requests
-from auth import load_cookies, cookies_to_dict
-
-# Load saved cookies
-cookies = load_cookies("rer_cookies.json")
-cookie_dict = cookies_to_dict(cookies)
-
-# Make authenticated requests
-session = requests.Session()
-session.cookies.update(cookie_dict)
-
-# Get user dashboard
-response = session.get('https://rer.ofgem.gov.uk/User')
-print(response.text)  # HTML page content
-```
-
-## Files
-
-- `auth.py` - Authentication module using Playwright
-- `openapi.yaml` - OpenAPI specification for RER endpoints
-- `rer_cookies.json` - Saved authentication cookies (created after login)
-
-## Authentication Flow
-
-1. **Initial Login** - Use `authenticate_rer()` with browser automation
-2. **MFA Verification** - Manually enter code when prompted
-3. **Cookie Storage** - Session cookies saved to file
-4. **Reuse Cookies** - Use saved cookies for subsequent requests
-5. **Re-authenticate** - When cookies expire (usually 24+ hours)
-
-## API Endpoints
-
-See `openapi.yaml` for complete endpoint documentation.
-
-### Key Endpoints:
+## Wrapped Endpoints
 
 - `GET /User` - User dashboard
 - `GET /User/Activity` - User activity log
@@ -73,36 +44,14 @@ See `openapi.yaml` for complete endpoint documentation.
 ## Example: Get Organisation Tasks
 
 ```python
-import requests
-from auth import load_cookies, cookies_to_dict
-from bs4 import BeautifulSoup
+from rer_api_wrapper import RERService
 
-# Setup authenticated session
-cookies = load_cookies()
-session = requests.Session()
-session.cookies.update(cookies_to_dict(cookies))
+cookies = {"cookie-name": "cookie-value"}
+service = RERService(auth_cookies=cookies)
 
-# Get tasks page
 org_id = "GEN0215941"
-response = session.get(
-    f'https://rer.ofgem.gov.uk/Organisations/{org_id}/Tasks/OutputData',
-    params={'Statuses': 'Draft'}
-)
-
-# Parse HTML to extract data
-soup = BeautifulSoup(response.text, 'html.parser')
-# ... extract task information from HTML
+tasks = service.get_organisation_output_data_tasks(org_id)
 ```
-
-## Notes
-
-⚠️ **This is not an official API** - It's a wrapper around the HTML portal
-
-⚠️ **MFA Required** - You must manually enter verification codes
-
-⚠️ **HTML Parsing** - Responses are HTML pages, not JSON
-
-⚠️ **Cookie Expiry** - Cookies typically last 24+ hours, then you need to re-authenticate
 
 ## Security
 
@@ -113,8 +62,5 @@ soup = BeautifulSoup(response.text, 'html.parser')
 
 ## Limitations
 
-- Not a true REST API (returns HTML, not JSON)
-- Requires MFA for initial authentication
-- Cookie-based auth (not API tokens)
 - Subject to website changes breaking the wrapper
-- No official support from Ofgem
+- This is an unofficial library with no support from Ofgem

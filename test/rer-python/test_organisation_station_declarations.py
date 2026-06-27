@@ -1,16 +1,12 @@
 """Tests for RER_wrapper.get_organisation_station_declarations() - GET /Organisations/{id}/Tasks/StationDeclarations"""
-import sys
 import os
 import json
 import pytest
 import re
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+from rer_api_wrapper import RER_wrapper
+from rer_api_wrapper.models import StationDeclarationTaskList, to_dict
 
-from dotenv import load_dotenv
-from rer import RER_wrapper
-
-load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
 
 COOKIES_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'rer_cookies.json')
 
@@ -21,16 +17,12 @@ YEAR_RE = re.compile(r'^\d{4}/\d{4}$')
 def wrapper():
     with open(COOKIES_FILE) as f:
         cookies = json.load(f)
-    return RER_wrapper(
-        cookies=cookies,
-        user_email=os.getenv("RER_EMAIL"),
-        user_password=os.getenv("RER_PASSWORD"),
-    )
+    return RER_wrapper(auth_cookies=cookies)
 
 
 @pytest.fixture(scope="module")
 def first_org_id(wrapper):
-    return wrapper.get_user_organisations()[0]["organisation_id"]
+    return wrapper.get_user_organisations()[0].organisation_id
 
 
 @pytest.fixture(scope="module")
@@ -39,7 +31,7 @@ def declarations(wrapper, first_org_id):
 
 
 def test_returns_dict(declarations):
-    assert isinstance(declarations, dict)
+    assert isinstance(declarations, StationDeclarationTaskList)
 
 
 def test_organisation_id_is_correct(declarations, first_org_id):
@@ -58,8 +50,7 @@ def test_each_task_has_required_fields(declarations):
 
 
 def test_print_raw(declarations):
-    import json
-    print(json.dumps(declarations, indent=2))
+    print(json.dumps(to_dict(declarations), indent=2))
 
 
 def test_year_format(declarations):

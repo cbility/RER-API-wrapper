@@ -1,15 +1,11 @@
 """Tests for RER_wrapper.get_user_organisations() - GET /User (all pages)"""
-import sys
 import os
 import json
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+from rer_api_wrapper import RER_wrapper
+from rer_api_wrapper.models import to_dict
 
-from dotenv import load_dotenv
-from rer import RER_wrapper
-
-load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
 
 COOKIES_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'rer_cookies.json')
 
@@ -18,11 +14,7 @@ COOKIES_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'rer_cookies.
 def wrapper():
     with open(COOKIES_FILE) as f:
         cookies = json.load(f)
-    return RER_wrapper(
-        cookies=cookies,
-        user_email=os.getenv("RER_EMAIL"),
-        user_password=os.getenv("RER_PASSWORD"),
-    )
+    return RER_wrapper(auth_cookies=cookies)
 
 
 @pytest.fixture(scope="module")
@@ -50,4 +42,4 @@ def test_each_organisation_has_required_fields(organisations):
 
 
 def test_print_raw(organisations):
-    print(json.dumps(organisations, indent=2))
+    print(json.dumps(to_dict(organisations), indent=2))

@@ -1,15 +1,11 @@
 """Tests for RER_wrapper.get_organisation_certificates() - GET /Organisations/{id}/Certificates"""
-import sys
 import os
 import json
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+from rer_api_wrapper import RER_wrapper
+from rer_api_wrapper.models import CertificatesOverview, to_dict
 
-from dotenv import load_dotenv
-from rer import RER_wrapper
-
-load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
 
 COOKIES_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'rer_cookies.json')
 ORG_ID = "GEN0202802"
@@ -23,11 +19,7 @@ def pytest_configure(config):
 def wrapper():
     with open(COOKIES_FILE) as f:
         cookies = json.load(f)
-    return RER_wrapper(
-        cookies=cookies,
-        user_email=os.getenv("RER_EMAIL"),
-        user_password=os.getenv("RER_PASSWORD"),
-    )
+    return RER_wrapper(auth_cookies=cookies)
 
 
 @pytest.fixture(scope="module")
@@ -36,7 +28,7 @@ def overview(wrapper):
 
 
 def test_returns_dict(overview):
-    assert isinstance(overview, dict)
+    assert isinstance(overview, CertificatesOverview)
 
 
 def test_organisation_id(overview):
@@ -65,4 +57,4 @@ def test_each_summary_has_fields(overview):
 
 
 def test_print_raw(overview):
-    print(json.dumps(overview, indent=2))
+    print(json.dumps(to_dict(overview), indent=2))
