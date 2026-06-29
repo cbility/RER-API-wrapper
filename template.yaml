@@ -1,0 +1,86 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  rer-api-wrapper
+
+  AWS lambda function for running https://github.com/cbility/RER-API-wrapper
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 30
+
+Resources:
+  RERWrapperApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      # API keys are enforced with x-api-key, but SAM deploy still treats this as
+      # not having an authorizer such as IAM, Cognito, or Lambda authorizer.
+      Auth:
+        ApiKeyRequired: true
+
+  RERWrapperFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: rer_api_wrapper.lambda_handler.handler
+      Runtime: python3.12
+      Architectures:
+        - x86_64
+      Events:
+        ProxyRoute:
+          Type: Api
+          Properties:
+            RestApiId: !Ref RERWrapperApi
+            Path: /{proxy+}
+            Method: any
+            Auth:
+              ApiKeyRequired: true
+
+  RERWrapperApiUsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    DependsOn:
+      - RERWrapperApiProdStage
+    Properties:
+      UsagePlanName: RERWrapperUsagePlan
+      ApiStages:
+        - ApiId: !Ref RERWrapperApi
+          Stage: Prod
+
+  RERWrapperApiKeyOne:
+    Type: AWS::ApiGateway::ApiKey
+    Properties:
+      Enabled: true
+      Name: RERWrapperApiKeyOne
+
+  RERWrapperApiKeyTwo:
+    Type: AWS::ApiGateway::ApiKey
+    Properties:
+      Enabled: true
+      Name: RERWrapperApiKeyTwo
+
+  RERWrapperUsagePlanKeyOne:
+    Type: AWS::ApiGateway::UsagePlanKey
+    Properties:
+      KeyId: !Ref RERWrapperApiKeyOne
+      KeyType: API_KEY
+      UsagePlanId: !Ref RERWrapperApiUsagePlan
+
+  RERWrapperUsagePlanKeyTwo:
+    Type: AWS::ApiGateway::UsagePlanKey
+    Properties:
+      KeyId: !Ref RERWrapperApiKeyTwo
+      KeyType: API_KEY
+      UsagePlanId: !Ref RERWrapperApiUsagePlan
+
+Outputs:
+  RERWrapperApiUrl:
+    Description: "API Gateway endpoint URL for the RER wrapper"
+    Value: !Sub "https://${RERWrapperApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/"
+  RERWrapperFunction:
+    Description: "RER wrapper Lambda Function ARN"
+    Value: !GetAtt RERWrapperFunction.Arn
+  RERWrapperFunctionIamRole:
+    Description: "Implicit IAM Role created for RER wrapper"
+    Value: !GetAtt RERWrapperFunctionRole.Arn

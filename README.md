@@ -56,6 +56,7 @@ tasks = service.get_organisation_output_data_tasks(org_id)
 ## Security
 
 - Store credentials securely (use environment variables)
+- Send an `x-api-key` header when calling the deployed wrapper API
 - Don't commit `rer_cookies.json` to version control
 - Cookies grant full account access - treat like passwords
 - Add `rer_cookies.json` to your `.gitignore`
