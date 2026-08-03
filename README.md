@@ -4,6 +4,8 @@ Python package for wrapping the Ofgem Renewable Electricity Register (RER) porta
 
 The repository also includes a separate session-auth Lambda under `session_auth/`. That function manages RER login, MFA, cookie validation, SmartSuite-backed cookie storage, and then invokes the main wrapper Lambda with refreshed session cookies attached.
 
+Deployed API usage is documented in [`docs/session-auth-api.md`](docs/session-auth-api.md).
+
 ## Installation
 
 ```bash
@@ -73,6 +75,31 @@ tasks = service.get_organisation_output_data_tasks(org_id)
 - Configure `SMARTSUITE_ACCOUNT_ID`, `SMARTSUITE_TABLE_ID`, `SMARTSUITE_RECORD_ID`, and `SMARTSUITE_COOKIES_FIELD` in the auth Lambda environment
 - If cached cookies are invalid, it uses the legacy Playwright + Gmail MFA flow to obtain fresh cookies, saves them, and invokes the main wrapper Lambda
 - Local SAM build/deploy of the auth Lambda image requires Docker so the image can be built and pushed to ECR
+
+## Session Auth API
+
+Use the separate session-auth API when your client should not manage RER cookies directly.
+
+1. Get the deployed base URL from the CloudFormation output `RERSessionAuthApiUrl`.
+2. Get the API key value for `RERSessionAuthApiKey` from API Gateway.
+3. Call a concrete wrapper route under that base URL, such as `/user` or `/organisations/{id}`.
+
+Notes:
+- The API Gateway route is `/{proxy+}`, so the bare stage root is not a valid endpoint.
+- Routes are the wrapper routes, not the upstream RER portal URLs.
+- You do not need to send RER cookies from the client.
+- The auth Lambda checks cached cookies in SmartSuite, refreshes them if needed, then forwards the request to the main wrapper Lambda.
+- A request that triggers RER login + MFA will take longer than a request that can reuse cached cookies.
+
+Example:
+
+```bash
+curl \
+  -H "x-api-key: YOUR_SESSION_AUTH_API_KEY" \
+  "https://YOUR_SESSION_AUTH_API_ID.execute-api.eu-west-2.amazonaws.com/Prod/user"
+```
+
+More examples and supported routes are in [`docs/session-auth-api.md`](docs/session-auth-api.md).
 
 ## Limitations
 
