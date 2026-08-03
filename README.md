@@ -2,6 +2,8 @@
 
 Python package for wrapping the Ofgem Renewable Electricity Register (RER) portal. The RER site returns HTML, so this package handles authenticated requests, parses the relevant pages, and returns typed Python objects ready to serialize as JSON from an AWS Lambda/API Gateway wrapper.
 
+The repository also includes a separate session-auth Lambda under `session_auth/`. That function manages RER login, MFA, cookie validation, SmartSuite-backed cookie storage, and then invokes the main wrapper Lambda with refreshed session cookies attached.
+
 ## Installation
 
 ```bash
@@ -57,9 +59,18 @@ tasks = service.get_organisation_output_data_tasks(org_id)
 
 - Store credentials securely (use environment variables)
 - Send an `x-api-key` header when calling the deployed wrapper API
+- Send an `x-api-key` header when calling the separate session-auth API
 - Don't commit `rer_cookies.json` to version control
 - Cookies grant full account access - treat like passwords
 - Add `rer_cookies.json` to your `.gitignore`
+
+## Session Auth Lambda
+
+- Source lives in `session_auth/`
+- It is deployed as a separate API Gateway endpoint and Lambda function
+- It loads cached cookies from a `SmartSuiteCookieStore` skeleton that you can finish against the SmartSuite API
+- If cached cookies are invalid, it uses the legacy Playwright + Gmail MFA flow to obtain fresh cookies, saves them, and invokes the main wrapper Lambda
+- The auth Lambda needs a Playwright-capable runtime or layer in AWS Lambda
 
 ## Limitations
 

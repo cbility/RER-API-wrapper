@@ -38,6 +38,51 @@ Resources:
             Auth:
               ApiKeyRequired: true
 
+  RERSessionAuthApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Auth:
+        ApiKeyRequired: true
+
+  RERSessionAuthFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: session_auth/
+      Handler: rer_session_auth.handler.handler
+      Runtime: python3.12
+      Timeout: 300
+      MemorySize: 2048
+      Architectures:
+        - x86_64
+      Environment:
+        Variables:
+          RER_WRAPPER_FUNCTION_NAME: !Ref RERWrapperFunction
+          PLAYWRIGHT_HEADLESS: "true"
+          RER_MFA_MAX_RETRIES: "5"
+          RER_MFA_WAIT_SECONDS: "10"
+          RER_EMAIL: ""
+          RER_PASSWORD: ""
+          GMAIL_TOKEN_JSON: ""
+          GMAIL_TOKEN_FILE: ""
+          SMARTSUITE_API_URL: ""
+          SMARTSUITE_API_TOKEN: ""
+          SMARTSUITE_APP_ID: ""
+          SMARTSUITE_TABLE_ID: ""
+          SMARTSUITE_RECORD_ID: ""
+      Policies:
+        - LambdaInvokePolicy:
+            FunctionName: !Ref RERWrapperFunction
+      Events:
+        ProxyRoute:
+          Type: Api
+          Properties:
+            RestApiId: !Ref RERSessionAuthApi
+            Path: /{proxy+}
+            Method: any
+            Auth:
+              ApiKeyRequired: true
+
   RERWrapperApiUsagePlan:
     Type: AWS::ApiGateway::UsagePlan
     DependsOn:
@@ -46,6 +91,16 @@ Resources:
       UsagePlanName: RERWrapperUsagePlan
       ApiStages:
         - ApiId: !Ref RERWrapperApi
+          Stage: Prod
+
+  RERSessionAuthApiUsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    DependsOn:
+      - RERSessionAuthApiProdStage
+    Properties:
+      UsagePlanName: RERSessionAuthUsagePlan
+      ApiStages:
+        - ApiId: !Ref RERSessionAuthApi
           Stage: Prod
 
   RERWrapperApiKeyOne:
@@ -59,6 +114,12 @@ Resources:
     Properties:
       Enabled: true
       Name: RERWrapperApiKeyTwo
+
+  RERSessionAuthApiKey:
+    Type: AWS::ApiGateway::ApiKey
+    Properties:
+      Enabled: true
+      Name: RERSessionAuthApiKey
 
   RERWrapperUsagePlanKeyOne:
     Type: AWS::ApiGateway::UsagePlanKey
@@ -74,13 +135,29 @@ Resources:
       KeyType: API_KEY
       UsagePlanId: !Ref RERWrapperApiUsagePlan
 
+  RERSessionAuthUsagePlanKey:
+    Type: AWS::ApiGateway::UsagePlanKey
+    Properties:
+      KeyId: !Ref RERSessionAuthApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref RERSessionAuthApiUsagePlan
+
 Outputs:
   RERWrapperApiUrl:
     Description: "API Gateway endpoint URL for the RER wrapper"
     Value: !Sub "https://${RERWrapperApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/"
+  RERSessionAuthApiUrl:
+    Description: "API Gateway endpoint URL for the RER session auth proxy"
+    Value: !Sub "https://${RERSessionAuthApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/"
   RERWrapperFunction:
     Description: "RER wrapper Lambda Function ARN"
     Value: !GetAtt RERWrapperFunction.Arn
+  RERSessionAuthFunction:
+    Description: "RER session auth Lambda Function ARN"
+    Value: !GetAtt RERSessionAuthFunction.Arn
   RERWrapperFunctionIamRole:
     Description: "Implicit IAM Role created for RER wrapper"
     Value: !GetAtt RERWrapperFunctionRole.Arn
+  RERSessionAuthFunctionIamRole:
+    Description: "Implicit IAM Role created for RER session auth proxy"
+    Value: !GetAtt RERSessionAuthFunctionRole.Arn
