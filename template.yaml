@@ -48,9 +48,7 @@ Resources:
   RERSessionAuthFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: session_auth/
-      Handler: rer_session_auth.handler.handler
-      Runtime: python3.12
+      PackageType: Image
       Timeout: 300
       MemorySize: 2048
       Architectures:
@@ -85,6 +83,10 @@ Resources:
             Method: any
             Auth:
               ApiKeyRequired: true
+    Metadata:
+      DockerContext: session_auth
+      Dockerfile: Dockerfile
+      DockerTag: python3.12-playwright-v1
 
   RERWrapperApiUsagePlan:
     Type: AWS::ApiGateway::UsagePlan
