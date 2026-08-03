@@ -67,9 +67,12 @@ Resources:
           GMAIL_TOKEN_FILE: ""
           SMARTSUITE_API_URL: ""
           SMARTSUITE_API_TOKEN: ""
-          SMARTSUITE_APP_ID: ""
+          SMARTSUITE_ACCOUNT_ID: ""
           SMARTSUITE_TABLE_ID: ""
           SMARTSUITE_RECORD_ID: ""
+          SMARTSUITE_COOKIES_FIELD: "session_cookies"
+          SMARTSUITE_REFRESHED_AT_FIELD: ""
+          SMARTSUITE_TIMEOUT_SECONDS: "30"
       Policies:
         - LambdaInvokePolicy:
             FunctionName: !Ref RERWrapperFunction

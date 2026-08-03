@@ -68,7 +68,8 @@ tasks = service.get_organisation_output_data_tasks(org_id)
 
 - Source lives in `session_auth/`
 - It is deployed as a separate API Gateway endpoint and Lambda function
-- It loads cached cookies from a `SmartSuiteCookieStore` skeleton that you can finish against the SmartSuite API
+- It loads cached cookies from a SmartSuite record using `Authorization: Token ...` plus the `ACCOUNT-ID` workspace header
+- Configure `SMARTSUITE_ACCOUNT_ID`, `SMARTSUITE_TABLE_ID`, `SMARTSUITE_RECORD_ID`, and `SMARTSUITE_COOKIES_FIELD` in the auth Lambda environment
 - If cached cookies are invalid, it uses the legacy Playwright + Gmail MFA flow to obtain fresh cookies, saves them, and invokes the main wrapper Lambda
 - The auth Lambda needs a Playwright-capable runtime or layer in AWS Lambda
 
