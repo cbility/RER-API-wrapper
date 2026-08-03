@@ -103,6 +103,8 @@ class SmartSuiteCookieStore:
 
     def _coerce_cookies(self, raw_value: object) -> dict[str, str]:
         if isinstance(raw_value, str):
+            if not raw_value.strip():
+                return {}
             parsed = json.loads(raw_value)
             if not isinstance(parsed, dict):
                 raise ValueError(f"Expected JSON object in SmartSuite field {self.cookies_field}.")
