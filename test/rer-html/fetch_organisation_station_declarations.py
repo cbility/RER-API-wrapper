@@ -1,4 +1,4 @@
-"""Fetch and save HTML from GET /Organisations/{organisationId}/Tasks/StationDeclarations.
+"""Fetch and save HTML from GET /Organisations/{organisationId}/StationDeclarations.
 
 Gets the first organisation ID from the user dashboard automatically.
 """
@@ -31,7 +31,7 @@ if not org_href:
 org_id = org_href.split('/Organisations/')[-1].split('/')[0]
 print(f"Using organisation ID: {org_id}")
 
-response = wrapper.session.get(wrapper.base_url + f'Organisations/{org_id}/Tasks/StationDeclarations')
+response = wrapper.session.get(wrapper.base_url + f'Organisations/{org_id}/StationDeclarations')
 response.raise_for_status()
 
 with open(OUTPUT, 'w', encoding='utf-8') as f:

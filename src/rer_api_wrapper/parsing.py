@@ -19,6 +19,8 @@ from rer_api_wrapper.models import (
     OutputDataTaskList,
     SchemeAccreditation,
     StationCapacity,
+    StationDeclaration,
+    StationDeclarationList,
     StationDeclarationTask,
     StationDeclarationTaskList,
     StationDetail,
@@ -187,6 +189,27 @@ def _parse_station_declaration_tasks(html: str, organisation_id: str) -> Station
         ))
 
     return StationDeclarationTaskList(organisation_id=organisation_id, tasks=tasks)
+
+def _parse_station_declarations(html: str, organisation_id: str) -> StationDeclarationList:
+    tree = HTMLParser(html)
+    declarations: list[StationDeclaration] = []
+
+    for row in tree.css("table tr")[1:]:
+        cells = row.css("td")
+        if len(cells) < 3:
+            continue
+        link = cells[0].css_first("a")
+        url = link.attrs.get("href", "") if link else ""
+        if not url:
+            raise ValueError("Station declaration link does not have href")
+        declarations.append(StationDeclaration(
+            declaration_type=cells[0].text(strip=True),
+            period=cells[1].text(strip=True),
+            status=cells[2].text(strip=True),
+            url=url,
+        ))
+
+    return StationDeclarationList(organisation_id=organisation_id, declarations=declarations)
 
 def _parse_organisation_stations(html: str, organisation_id: str) -> OrganisationStationList:
     tree = HTMLParser(html)

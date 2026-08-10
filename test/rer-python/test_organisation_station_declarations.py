@@ -1,4 +1,4 @@
-"""Tests for RER_wrapper.get_organisation_station_declarations() - GET /Organisations/{id}/Tasks/StationDeclarations"""
+"""Tests for RER_wrapper.get_organisation_station_declarations() - GET /Organisations/{id}/StationDeclarations"""
 import os
 import json
 from dataclasses import asdict
@@ -6,7 +6,7 @@ import pytest
 import re
 
 from rer_api_wrapper import RER_wrapper
-from rer_api_wrapper.models import StationDeclarationTaskList
+from rer_api_wrapper.models import StationDeclarationList
 
 
 COOKIES_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'rer_cookies.json')
@@ -31,30 +31,31 @@ def declarations(wrapper, first_org_id):
     return wrapper.get_organisation_station_declarations(first_org_id)
 
 
-def test_returns_dict(declarations):
-    assert isinstance(declarations, StationDeclarationTaskList)
+def test_returns_station_declaration_list(declarations):
+    assert isinstance(declarations, StationDeclarationList)
 
 
 def test_organisation_id_is_correct(declarations, first_org_id):
     assert declarations["organisation_id"] == first_org_id
 
 
-def test_tasks_is_list(declarations):
-    assert isinstance(declarations["tasks"], list)
+def test_declarations_is_list(declarations):
+    assert isinstance(declarations["declarations"], list)
 
 
-def test_each_task_has_required_fields(declarations):
-    for task in declarations["tasks"]:
-        assert isinstance(task["declaration_type"], str) and len(task["declaration_type"]) > 0
-        assert isinstance(task["year"], str)
-        assert isinstance(task["url"], str)
+def test_each_declaration_has_required_fields(declarations):
+    for declaration in declarations["declarations"]:
+        assert isinstance(declaration["declaration_type"], str) and len(declaration["declaration_type"]) > 0
+        assert isinstance(declaration["period"], str)
+        assert isinstance(declaration["status"], str)
+        assert isinstance(declaration["url"], str)
 
 
 def test_print_raw(declarations):
     print(json.dumps(declarations, default=asdict, indent=2))
 
 
-def test_year_format(declarations):
-    for task in declarations["tasks"]:
-        if task["year"]:
-            assert YEAR_RE.match(task["year"]), f"Unexpected year format: {task['year']}"
+def test_period_format(declarations):
+    for declaration in declarations["declarations"]:
+        if declaration["period"]:
+            assert YEAR_RE.match(declaration["period"]), f"Unexpected period format: {declaration['period']}"

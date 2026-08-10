@@ -13,6 +13,7 @@ from rer_api_wrapper.models import (
     OrganisationStationList,
     OrganisationSummary,
     OutputDataTaskList,
+    StationDeclarationList,
     StationDeclarationTaskList,
     StationDetail,
     User,
@@ -65,6 +66,9 @@ class RERService:
                     sort_direction=query.get("sortDirection"),
                     page_number=int(query.get("pageNumber", 1)),
                 )
+
+            if len(parts) == 3 and parts_lower[2] == "station-declarations":
+                return 200, self.get_organisation_station_declarations(organisation_id)
 
             if len(parts) == 3 and parts_lower[2] == "stations":
                 return 200, self.get_organisation_stations(organisation_id)
@@ -138,6 +142,9 @@ class RERService:
             sort_direction=sort_direction,
             page_number=page_number,
         )
+
+    def get_organisation_station_declarations(self, organisation_id: str) -> StationDeclarationList:
+        return self.wrapper.get_organisation_station_declarations(organisation_id)
 
     def get_organisation_stations(self, organisation_id: str) -> OrganisationStationList:
         return self.wrapper.get_organisation_stations(organisation_id)

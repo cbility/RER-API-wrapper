@@ -172,6 +172,14 @@ class RER_wrapper:
         response = self._request(f"Organisations/{organisation_id}/Tasks/StationDeclarations", params=params)
         return rer_parsing._parse_station_declaration_tasks(response.text, organisation_id)
 
+    def get_organisation_station_declarations(
+        self,
+        organisation_id: str,
+    ) -> rer_parsing.StationDeclarationList:
+        """GET /Organisations/{organisationId}/StationDeclarations - Returns station declarations."""
+        response = self._request(f"Organisations/{organisation_id}/StationDeclarations")
+        return rer_parsing._parse_station_declarations(response.text, organisation_id)
+
     def get_organisation_stations(self, organisation_id: str) -> rer_parsing.OrganisationStationList:
         """GET /Organisations/{organisationId}/Stations - Returns list of stations for the organisation."""
         response = self._request(f"Organisations/{organisation_id}/Stations")

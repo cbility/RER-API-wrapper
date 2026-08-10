@@ -96,6 +96,20 @@ class StationDeclarationTaskList(RERModel):
 
 
 @dataclass
+class StationDeclaration(RERModel):
+    declaration_type: str
+    period: str
+    status: str
+    url: str
+
+
+@dataclass
+class StationDeclarationList(RERModel):
+    organisation_id: str
+    declarations: list[StationDeclaration]
+
+
+@dataclass
 class OrganisationStation(RERModel):
     station_id: str
     station_name: str
