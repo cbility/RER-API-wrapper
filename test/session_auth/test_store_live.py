@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import json
+import os
 import uuid
 from pathlib import Path
+from time import monotonic, sleep
 
 import pytest
+import requests
 from dotenv import load_dotenv
 
 from rer_session_auth.store import SmartSuiteCookieStore
@@ -38,6 +41,28 @@ def _patch_raw_fields(store: SmartSuiteCookieStore, payload: dict[str, object]) 
     response.raise_for_status()
 
 
+def _restore_record_fields(store: SmartSuiteCookieStore, original_record: dict[str, object]) -> None:
+    restore_payload: dict[str, object] = {
+        store.cookies_field: original_record.get(store.cookies_field, ""),
+    }
+    if store.refreshed_at_field:
+        restore_payload[store.refreshed_at_field] = original_record.get(store.refreshed_at_field, "")
+    _patch_raw_fields(store, restore_payload)
+
+
+def _load_session_auth_api_config() -> tuple[str, str, str]:
+    load_dotenv(REPO_ROOT / ".env")
+    api_url = os.getenv("RER_SESSION_AUTH_API_URL")
+    api_key_name = os.getenv("RER_SESSION_AUTH_API_KEY_NAME")
+    api_key_value = os.getenv("RER_SESSION_AUTH_API_KEY_VALUE")
+    if not api_url or not api_key_name or not api_key_value:
+        pytest.skip(
+            "Missing RER_SESSION_AUTH_API_URL, RER_SESSION_AUTH_API_KEY_NAME, or "
+            "RER_SESSION_AUTH_API_KEY_VALUE for live session-auth test."
+        )
+    return api_url.rstrip("/"), api_key_name, api_key_value
+
+
 def test_smartsuite_store_round_trip_live():
     store = _load_live_store()
 
@@ -69,16 +94,49 @@ def test_smartsuite_store_round_trip_live():
         updated_record = updated_record_response.json()
         assert json.loads(updated_record[store.cookies_field]) == probe_cookies
     finally:
-        restore_payload: dict[str, object] = {}
-        if original_cookies_present:
-            restore_payload[store.cookies_field] = original_cookies_value
-        else:
-            restore_payload[store.cookies_field] = ""
-
+        restore_payload: dict[str, object] = {
+            store.cookies_field: original_cookies_value if original_cookies_present else "",
+        }
         if store.refreshed_at_field:
-            if original_refreshed_present:
-                restore_payload[store.refreshed_at_field] = original_refreshed_value
-            else:
-                restore_payload[store.refreshed_at_field] = ""
-
+            restore_payload[store.refreshed_at_field] = (
+                original_refreshed_value if original_refreshed_present else ""
+            )
         _patch_raw_fields(store, restore_payload)
+
+
+def test_session_auth_starts_refresh_and_caches_cookies_live():
+    store = _load_live_store()
+    api_url, api_key_name, api_key_value = _load_session_auth_api_config()
+
+    record_response = store.session.get(store._record_url(), timeout=store.timeout)
+    record_response.raise_for_status()
+    original_record = record_response.json()
+
+    try:
+        _patch_raw_fields(store, {store.cookies_field: ""})
+        assert store.load_cookies() is None
+
+        response = requests.get(
+            api_url,
+            headers={"x-api-key": api_key_value},
+            timeout=30,
+        )
+        if response.status_code == 403:
+            pytest.fail(
+                "Session-auth API Gateway rejected the configured credentials for "
+                f"{api_url}/user using API key {api_key_name!r}: {response.text}"
+            )
+        assert response.status_code == 202
+        assert response.json() == {"status": "refreshing"}
+
+        deadline = monotonic() + 300
+        refreshed_cookies = None
+        while monotonic() < deadline:
+            refreshed_cookies = store.load_cookies()
+            if refreshed_cookies:
+                break
+            sleep(5)
+        assert refreshed_cookies
+        assert all(not name.startswith("ai_") for name in refreshed_cookies)
+    finally:
+        _restore_record_fields(store, original_record)

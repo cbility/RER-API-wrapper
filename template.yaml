@@ -55,7 +55,6 @@ Resources:
         - x86_64
       Environment:
         Variables:
-          RER_WRAPPER_FUNCTION_NAME: !Ref RERWrapperFunction
           PLAYWRIGHT_HEADLESS: "true"
           RER_MFA_MAX_RETRIES: "5"
           RER_MFA_WAIT_SECONDS: "10"
@@ -72,15 +71,17 @@ Resources:
           SMARTSUITE_REFRESHED_AT_FIELD: ""
           SMARTSUITE_TIMEOUT_SECONDS: "30"
       Policies:
-        - LambdaInvokePolicy:
-            FunctionName: !Ref RERWrapperFunction
+        - Statement:
+            - Effect: Allow
+              Action: lambda:InvokeFunction
+              Resource: !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${AWS::StackName}-RERSessionAuthFunction-*"
       Events:
-        ProxyRoute:
+        CookieRoute:
           Type: Api
           Properties:
             RestApiId: !Ref RERSessionAuthApi
-            Path: /{proxy+}
-            Method: any
+            Path: /
+            Method: get
             Auth:
               ApiKeyRequired: true
     Metadata:

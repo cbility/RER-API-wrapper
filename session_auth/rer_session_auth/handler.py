@@ -9,7 +9,6 @@ from rer_session_auth.auth import (
     RERAuthConfig,
     are_cookies_valid,
     browser_authenticate_rer,
-    build_cookie_header,
     sanitize_cookies,
 )
 from rer_session_auth.store import CookieStore, build_cookie_store
@@ -18,84 +17,80 @@ from rer_session_auth.store import CookieStore, build_cookie_store
 log = logging.getLogger(__name__)
 
 
-class LambdaInvoker(Protocol):
-    def invoke(self, function_name: str, payload: dict[str, Any]) -> dict[str, Any]:
+class RefreshInvoker(Protocol):
+    def invoke(self, function_name: str, payload: dict[str, Any]) -> None:
         ...
 
 
-class Boto3LambdaInvoker:
+class Boto3RefreshInvoker:
     def __init__(self):
         import boto3  # type: ignore[import-not-found]
 
         self.client = boto3.client("lambda")
 
-    def invoke(self, function_name: str, payload: dict[str, Any]) -> dict[str, Any]:
-        response = self.client.invoke(
+    def invoke(self, function_name: str, payload: dict[str, Any]) -> None:
+        self.client.invoke(
             FunctionName=function_name,
-            InvocationType="RequestResponse",
+            InvocationType="Event",
             Payload=json.dumps(payload).encode("utf-8"),
         )
-        response_payload = response["Payload"].read().decode("utf-8")
-        if response.get("FunctionError"):
-            raise RuntimeError(f"Wrapper Lambda invocation failed: {response_payload}")
-        return json.loads(response_payload)
 
 
-class SessionAuthProxy:
+class SessionCookieService:
     def __init__(
         self,
         store: CookieStore,
-        invoker: LambdaInvoker,
+        refresh_invoker: RefreshInvoker,
         auth_config: RERAuthConfig,
-        wrapper_function_name: str,
+        function_name: str,
     ):
         self.store = store
-        self.invoker = invoker
+        self.refresh_invoker = refresh_invoker
         self.auth_config = auth_config
-        self.wrapper_function_name = wrapper_function_name
+        self.function_name = function_name
 
-    def handle(self, event: dict[str, Any]) -> dict[str, Any]:
-        cookies = self._get_valid_cookies()
-        enriched_event = enrich_event_with_cookies(event, cookies)
-        return self.invoker.invoke(self.wrapper_function_name, enriched_event)
+    def get_cookies(self) -> dict[str, Any]:
+        cached_cookies = sanitize_cookies(self.store.load_cookies() or {})
+        if cached_cookies and are_cookies_valid(cached_cookies):
+            log.info("Returning cached RER session cookies")
+            return _response(200, {"cookies": cached_cookies})
 
-    def _get_valid_cookies(self) -> dict[str, str]:
-        cached_cookies = self.store.load_cookies() or {}
-        sanitized_cached_cookies = sanitize_cookies(cached_cookies)
-        if sanitized_cached_cookies and are_cookies_valid(sanitized_cached_cookies):
-            log.info("Using cached RER session cookies")
-            return sanitized_cached_cookies
+        log.info("Cached RER cookies are missing or invalid. Starting refresh.")
+        self.refresh_invoker.invoke(self.function_name, {"refresh_cookies": True})
+        return _response(202, {"status": "refreshing"})
 
-        log.info("Cached RER cookies are missing or invalid. Refreshing session.")
+    def refresh_cookies(self) -> None:
+        log.info("Refreshing RER session cookies")
         refreshed_cookies = sanitize_cookies(browser_authenticate_rer(self.auth_config))
         self.store.save_cookies(refreshed_cookies)
-        return refreshed_cookies
+        log.info("Saved refreshed RER session cookies")
 
 
-def enrich_event_with_cookies(event: dict[str, Any], cookies: dict[str, str]) -> dict[str, Any]:
-    headers = dict(event.get("headers") or {})
-    headers["Cookie"] = build_cookie_header(cookies)
-
-    enriched_event = dict(event)
-    enriched_event["headers"] = headers
-    enriched_event["auth_cookies"] = cookies
-    enriched_event["cookies"] = [f"{name}={value}" for name, value in cookies.items()]
-    return enriched_event
+def _response(status_code: int, payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "statusCode": status_code,
+        "headers": {"Content-Type": "application/json"},
+        "body": json.dumps(payload),
+    }
 
 
-def build_proxy() -> SessionAuthProxy:
-    wrapper_function_name = os.getenv("RER_WRAPPER_FUNCTION_NAME")
-    if not wrapper_function_name:
-        raise RuntimeError("Set RER_WRAPPER_FUNCTION_NAME for the auth Lambda.")
+def build_cookie_service() -> SessionCookieService:
+    function_name = os.getenv("AWS_LAMBDA_FUNCTION_NAME")
+    if not function_name:
+        raise RuntimeError("AWS_LAMBDA_FUNCTION_NAME is required to start a cookie refresh.")
 
-    return SessionAuthProxy(
+    return SessionCookieService(
         store=build_cookie_store(),
-        invoker=Boto3LambdaInvoker(),
+        refresh_invoker=Boto3RefreshInvoker(),
         auth_config=RERAuthConfig.from_env(),
-        wrapper_function_name=wrapper_function_name,
+        function_name=function_name,
     )
 
 
-def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
+def handler(event: dict[str, Any], context: Any) -> dict[str, Any] | None:
     del context
-    return build_proxy().handle(event)
+    service = build_cookie_service()
+    if event.get("refresh_cookies") is True:
+        service.refresh_cookies()
+        return None
+    return service.get_cookies()

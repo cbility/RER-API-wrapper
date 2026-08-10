@@ -2,7 +2,7 @@
 
 Python package for wrapping the Ofgem Renewable Electricity Register (RER) portal. The RER site returns HTML, so this package handles authenticated requests, parses the relevant pages, and returns typed Python objects ready to serialize as JSON from an AWS Lambda/API Gateway wrapper.
 
-The repository also includes a separate session-auth Lambda under `session_auth/`. That function manages RER login, MFA, cookie validation, SmartSuite-backed cookie storage, and then invokes the main wrapper Lambda with refreshed session cookies attached.
+The repository also includes a separate session-auth Lambda under `session_auth/`. That function manages RER login, MFA, cookie validation, and SmartSuite-backed cookie storage, returning cached cookies for clients to use with the main wrapper Lambda.
 
 Deployed API usage is documented in [`docs/session-auth-api.md`](docs/session-auth-api.md).
 
@@ -73,30 +73,28 @@ tasks = service.get_organisation_output_data_tasks(org_id)
 - `RERSessionAuthFunction` is packaged as a Lambda container image so Playwright/Chromium is available at runtime
 - It loads cached cookies from a SmartSuite record using `Authorization: Token ...` plus the `ACCOUNT-ID` workspace header
 - Configure `SMARTSUITE_ACCOUNT_ID`, `SMARTSUITE_TABLE_ID`, `SMARTSUITE_RECORD_ID`, and `SMARTSUITE_COOKIES_FIELD` in the auth Lambda environment
-- If cached cookies are invalid, it uses the legacy Playwright + Gmail MFA flow to obtain fresh cookies, saves them, and invokes the main wrapper Lambda
+- If cached cookies are invalid, it starts the Playwright + Gmail MFA flow asynchronously and returns `202 Accepted`; the refreshed cookies are saved to SmartSuite for a later request
 - Local SAM build/deploy of the auth Lambda image requires Docker so the image can be built and pushed to ECR
 
 ## Session Auth API
 
-Use the separate session-auth API when your client should not manage RER cookies directly.
+Use the separate session-auth API to obtain RER cookies before calling the wrapper API.
 
 1. Get the deployed base URL from the CloudFormation output `RERSessionAuthApiUrl`.
 2. Get the API key value for `RERSessionAuthApiKey` from API Gateway.
-3. Call a concrete wrapper route under that base URL, such as `/user` or `/organisations/{id}`.
+3. Call the session-auth API root. It returns `200` with cached cookies or `202` while refreshing them.
+4. Send returned cookies to the wrapper API.
 
 Notes:
-- The API Gateway route is `/{proxy+}`, so the bare stage root is not a valid endpoint.
-- Routes are the wrapper routes, not the upstream RER portal URLs.
-- You do not need to send RER cookies from the client.
-- The auth Lambda checks cached cookies in SmartSuite, refreshes them if needed, then forwards the request to the main wrapper Lambda.
-- A request that triggers RER login + MFA will take longer than a request that can reuse cached cookies.
+- A `202` response means refresh is running in the background; retry after a short delay.
+- The wrapper API is separate and requires its own API key.
 
 Example:
 
 ```bash
 curl \
   -H "x-api-key: YOUR_SESSION_AUTH_API_KEY" \
-  "https://YOUR_SESSION_AUTH_API_ID.execute-api.eu-west-2.amazonaws.com/Prod/user"
+  "https://YOUR_SESSION_AUTH_API_ID.execute-api.eu-west-2.amazonaws.com/Prod/"
 ```
 
 More examples and supported routes are in [`docs/session-auth-api.md`](docs/session-auth-api.md).

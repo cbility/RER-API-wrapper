@@ -269,7 +269,13 @@ def browser_authenticate_rer(config: RERAuthConfig) -> dict[str, str]:
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(
             headless=config.headless,
-            args=["--disable-dev-shm-usage", "--no-sandbox"],
+            args=[
+                "--disable-dev-shm-usage",
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-gpu",
+                "--no-zygote",
+            ],
         )
         page = browser.new_page()
         try:
