@@ -166,6 +166,15 @@ class RERService:
     def get_organisation_certificates_breakdown(self, organisation_id: str, cert_type: str) -> CertificateBreakdown:
         return self.wrapper.get_organisation_certificates_breakdown(organisation_id, cert_type)
 
+    def select_certificates(
+        self,
+        organisation_id: str,
+        cert_type: str,
+        station: str,
+        output_period: str,
+    ) -> None:
+        self.wrapper.select_certificates(organisation_id, cert_type, station, output_period)
+
     def get_organisation_certificates_history(
         self,
         organisation_id: str,
