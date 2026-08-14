@@ -13,19 +13,27 @@ BREAKDOWN_HTML = """
       <td><input name="selectedCertificates" value="12345"></td>
       <td>Scotland</td><td>Wind Farm</td><td>Onshore wind</td><td>Apr 2025</td><td>106</td>
     </tr>
+    <tr>
+      <td><input name="selectedCertificates" value="67890"></td>
+      <td>Scotland</td><td>Wind Farm</td><td>Onshore wind</td><td>May 2025</td><td>107</td>
+    </tr>
+    <tr>
+      <td><input name="selectedCertificates" value="98765"></td>
+      <td>Scotland</td><td>Wind Farm</td><td>Onshore wind</td><td>Jun 2025</td><td>108</td>
+    </tr>
   </table>
   <input name="__RequestVerificationToken" value="csrf-token">
 </form>
 """
 
 
-def test_select_certificates_posts_exact_matching_range():
+def test_select_certificates_posts_all_ranges_inclusive():
     wrapper = RER_wrapper.__new__(RER_wrapper)
     get_response = Mock(text=BREAKDOWN_HTML)
     post_response = Mock()
     wrapper._request = Mock(side_effect=[get_response, post_response])
 
-    wrapper.select_certificates("GEN0202802", "rego", "Wind Farm", "Apr 2025")
+    wrapper.select_certificates("GEN0202802", "rego", "Wind Farm", "Apr 2025", "May 2025")
 
     endpoint = "Organisations/GEN0202802/Certificates/REGO/Breakdown"
     assert wrapper._request.call_args_list[0].args == (endpoint,)
@@ -33,7 +41,7 @@ def test_select_certificates_posts_exact_matching_range():
     assert wrapper._request.call_args_list[1].kwargs == {
         "method": "POST",
         "data": {
-            "selectedCertificates": "12345",
+          "selectedCertificates": ["12345", "67890"],
             "addSelected": "addSelected",
             "__RequestVerificationToken": "csrf-token",
         },
@@ -47,6 +55,6 @@ def test_select_certificates_rejects_existing_selection():
     )))
 
     with pytest.raises(ValueError, match="already selected"):
-        wrapper.select_certificates("GEN0202802", "REGO", "Wind Farm", "Apr 2025")
+      wrapper.select_certificates("GEN0202802", "REGO", "Wind Farm", "Apr 2025", "May 2025")
 
     assert wrapper._request.call_count == 1

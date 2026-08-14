@@ -1,5 +1,6 @@
 # region imports
 
+import calendar
 import logging # for logging
 
 import requests # lighttweight web requests
@@ -190,7 +191,7 @@ class RER_wrapper:
         response = self._request(f"Organisations/Stations/{station_id}")
         return rer_parsing._parse_station(response.text, station_id)
 
-    def find_organisation(
+    def find_transfer_organisation(
         self,
         organisation_id: str,
         recipient_reference: str,
@@ -229,17 +230,27 @@ class RER_wrapper:
         organisation_id: str,
         cert_type: str,
         station: str,
-        output_period: str,
+        start_period: str,
+        end_period: str,
     ) -> None:
-        """Select one certificate range for a later transfer or retirement.
+        """Select certificate ranges for a station over an inclusive period range.
 
         The portal selection is shared state. To prevent an unintended transfer,
-        this method refuses to alter an existing selection and requires exactly
-        one matching station and output period.
+        this method refuses to alter an existing selection.
         """
         cert_type = cert_type.upper()
         if cert_type not in {"ROC", "REGO"}:
             raise ValueError("cert_type must be either 'ROC' or 'REGO'.")
+
+        try:
+            start_month, start_year = start_period.split()
+            end_month, end_year = end_period.split()
+            start_index = (int(start_year), list(calendar.month_abbr).index(start_month))
+            end_index = (int(end_year), list(calendar.month_abbr).index(end_month))
+        except (ValueError, IndexError):
+            raise ValueError("Periods must use the format 'Mon YYYY', for example 'Apr 2025'.") from None
+        if start_index > end_index:
+            raise ValueError("start_period must not be after end_period.")
 
         endpoint = f"Organisations/{organisation_id}/Certificates/{cert_type}/Breakdown"
         response = self._request(endpoint)
@@ -258,19 +269,21 @@ class RER_wrapper:
                 len(cells) >= 6
                 and selection
                 and cells[2].text(strip=True) == station
-                and cells[4].text(strip=True) == output_period
             ):
-                certificate_id = selection.attrs.get("value")
-                if certificate_id:
-                    matches.append(certificate_id)
+                try:
+                    month, year = cells[4].text(strip=True).split()
+                    period_index = (int(year), list(calendar.month_abbr).index(month))
+                except (ValueError, IndexError):
+                    continue
+                if start_index <= period_index <= end_index:
+                    certificate_id = selection.attrs.get("value")
+                    if certificate_id:
+                        matches.append(certificate_id)
 
         if not matches:
             raise ValueError(
-                f"No {cert_type} certificate range matches station {station!r} and output period {output_period!r}."
-            )
-        if len(matches) > 1:
-            raise ValueError(
-                f"Multiple {cert_type} certificate ranges match station {station!r} and output period {output_period!r}."
+                f"No {cert_type} certificate ranges match station {station!r} between "
+                f"{start_period!r} and {end_period!r}."
             )
 
         token_el = tree.css_first("input[name=__RequestVerificationToken]")
@@ -282,7 +295,7 @@ class RER_wrapper:
             endpoint,
             method="POST",
             data={
-                "selectedCertificates": matches[0],
+                "selectedCertificates": matches,
                 "addSelected": "addSelected",
                 "__RequestVerificationToken": csrf,
             },

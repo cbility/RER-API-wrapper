@@ -158,7 +158,7 @@ class RERService:
         recipient_reference: str,
         cert_type: str = "REGO",
     ) -> OrganisationSearchResult | None:
-        return self.wrapper.find_organisation(organisation_id, recipient_reference, cert_type)
+        return self.wrapper.find_transfer_organisation(organisation_id, recipient_reference, cert_type)
 
     def get_organisation_certificates(self, organisation_id: str) -> CertificatesOverview:
         return self.wrapper.get_organisation_certificates(organisation_id)
@@ -171,9 +171,10 @@ class RERService:
         organisation_id: str,
         cert_type: str,
         station: str,
-        output_period: str,
+        start_period: str,
+        end_period: str,
     ) -> None:
-        self.wrapper.select_certificates(organisation_id, cert_type, station, output_period)
+        self.wrapper.select_certificates(organisation_id, cert_type, station, start_period, end_period)
 
     def get_organisation_certificates_history(
         self,
