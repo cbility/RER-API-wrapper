@@ -1,4 +1,5 @@
 from typing import Optional
+import re
 from selectolax.parser import HTMLParser # for parsing HTML
 from rer_api_wrapper.models import (
     CertificateBreakdown,
@@ -18,6 +19,7 @@ from rer_api_wrapper.models import (
     OutputDataTask,
     OutputDataTaskList,
     SchemeAccreditation,
+    StationSchemeStatus,
     StationCapacity,
     StationDeclaration,
     StationDeclarationList,
@@ -224,14 +226,22 @@ def _parse_organisation_stations(html: str, organisation_id: str) -> Organisatio
         if not url:
             raise ValueError("Organisation station link does not have href")
         station_id = url.split("/Stations/")[-1] if url else ""
-        statuses = [t.text(strip=True) for t in cells[5].css("strong")]
+        scheme_statuses: list[StationSchemeStatus] = []
+        for status_tag in cells[5].css("strong"):
+            status = status_tag.text(strip=True)
+            test_id = status_tag.attrs.get("data-test-id") or ""
+            match = re.search(r"-(rego|roofit)-status-tag$", test_id, re.IGNORECASE)
+            scheme = match.group(1).upper() if match else cells[2].text(strip=True)
+            if scheme == "ROOFIT":
+                scheme = "ROO-FIT"
+            scheme_statuses.append(StationSchemeStatus(scheme=scheme, status=status))
         stations.append(OrganisationStation(
             station_id=station_id,
             station_name=cells[1].text(strip=True),
             organisation_name=cells[0].text(strip=True),
             country=cells[3].text(strip=True),
             technology_group=cells[4].text(strip=True),
-            statuses=statuses,
+            scheme_statuses=scheme_statuses,
             last_updated=cells[6].text(strip=True),
             url=url,
         ))
