@@ -95,6 +95,13 @@ Resources:
       Auth:
         ApiKeyRequired: true
 
+  RERScraperApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Auth:
+        ApiKeyRequired: true
+
   RERSessionAuthFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -139,6 +146,42 @@ Resources:
       Dockerfile: Dockerfile
       DockerTag: python3.12-playwright-v1
 
+  RERScraperFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: rer_scraper.handler.handler
+      Runtime: python3.12
+      Timeout: 300
+      MemorySize: 1024
+      EventInvokeConfig:
+        MaximumRetryAttempts: 2
+        MaximumEventAgeInSeconds: 3600
+      Architectures:
+        - x86_64
+      Environment:
+        Variables:
+          RER_SESSION_AUTH_API_URL: ""
+          RER_SESSION_AUTH_API_KEY_VALUE: ""
+          SMARTSUITE_API_URL: !Ref SmartSuiteApiUrl
+          SMARTSUITE_API_TOKEN: !Ref SmartSuiteApiToken
+          SMARTSUITE_ACCOUNT_ID: !Ref SmartSuiteAccountId
+          SMARTSUITE_TIMEOUT_SECONDS: !Ref SmartSuiteTimeoutSeconds
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: lambda:InvokeFunction
+              Resource: !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${AWS::StackName}-RERScraperFunction-*"
+      Events:
+        ScrapeRoute:
+          Type: Api
+          Properties:
+            RestApiId: !Ref RERScraperApi
+            Path: /
+            Method: post
+            Auth:
+              ApiKeyRequired: true
+
   RERWrapperApiUsagePlan:
     Type: AWS::ApiGateway::UsagePlan
     DependsOn:
@@ -159,6 +202,16 @@ Resources:
         - ApiId: !Ref RERSessionAuthApi
           Stage: Prod
 
+  RERScraperApiUsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    DependsOn:
+      - RERScraperApiProdStage
+    Properties:
+      UsagePlanName: RERScraperUsagePlan
+      ApiStages:
+        - ApiId: !Ref RERScraperApi
+          Stage: Prod
+
   RERWrapperApiKeyOne:
     Type: AWS::ApiGateway::ApiKey
     Properties:
@@ -176,6 +229,12 @@ Resources:
     Properties:
       Enabled: true
       Name: RERSessionAuthApiKey
+
+  RERScraperApiKey:
+    Type: AWS::ApiGateway::ApiKey
+    Properties:
+      Enabled: true
+      Name: RERScraperApiKey
 
   RERWrapperUsagePlanKeyOne:
     Type: AWS::ApiGateway::UsagePlanKey
@@ -198,6 +257,13 @@ Resources:
       KeyType: API_KEY
       UsagePlanId: !Ref RERSessionAuthApiUsagePlan
 
+  RERScraperUsagePlanKey:
+    Type: AWS::ApiGateway::UsagePlanKey
+    Properties:
+      KeyId: !Ref RERScraperApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref RERScraperApiUsagePlan
+
 Outputs:
   RERWrapperApiUrl:
     Description: "API Gateway endpoint URL for the RER wrapper"
@@ -205,12 +271,18 @@ Outputs:
   RERSessionAuthApiUrl:
     Description: "API Gateway endpoint URL for the RER session auth proxy"
     Value: !Sub "https://${RERSessionAuthApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/"
+  RERScraperApiUrl:
+    Description: "API Gateway endpoint URL for the RER scraper"
+    Value: !Sub "https://${RERScraperApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/"
   RERWrapperFunction:
     Description: "RER wrapper Lambda Function ARN"
     Value: !GetAtt RERWrapperFunction.Arn
   RERSessionAuthFunction:
     Description: "RER session auth Lambda Function ARN"
     Value: !GetAtt RERSessionAuthFunction.Arn
+  RERScraperFunction:
+    Description: "RER scraper Lambda Function ARN"
+    Value: !GetAtt RERScraperFunction.Arn
   RERWrapperFunctionIamRole:
     Description: "Implicit IAM Role created for RER wrapper"
     Value: !GetAtt RERWrapperFunctionRole.Arn

@@ -5,6 +5,7 @@ Python package for wrapping the Ofgem Renewable Electricity Register (RER) porta
 The repository also includes a separate session-auth Lambda under `session_auth/`. That function manages RER login, MFA, cookie validation, and SmartSuite-backed cookie storage, returning cached cookies for clients to use with the main wrapper Lambda.
 
 Deployed API usage is documented in [`docs/session-auth-api.md`](docs/session-auth-api.md).
+Scraper usage is documented in [`docs/scraper-api.md`](docs/scraper-api.md).
 
 ## Installation
 
@@ -50,6 +51,12 @@ Run `sam deploy` after code or infrastructure changes. Run
 `./scripts/sync-session-auth-env.sh` after every deployment and whenever `.env`
 values change. The sync script preserves JSON values such as `GMAIL_TOKEN_JSON`
 by updating the Lambda environment through the AWS CLI structured JSON API.
+
+The scraper Lambda requires separate configuration after deployment:
+
+```bash
+./scripts/sync-scraper-env.sh
+```
 
 ## Getting started
 
