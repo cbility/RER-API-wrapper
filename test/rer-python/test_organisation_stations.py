@@ -48,7 +48,10 @@ def test_each_station_has_required_fields(stations):
         assert isinstance(s["organisation_name"], str) and len(s["organisation_name"]) > 0
         assert isinstance(s["country"], str) and len(s["country"]) > 0
         assert isinstance(s["technology_group"], str) and len(s["technology_group"]) > 0
-        assert isinstance(s["statuses"], list) and len(s["statuses"]) > 0
+        assert isinstance(s["scheme_statuses"], list) and len(s["scheme_statuses"]) > 0
+        for scheme_status in s["scheme_statuses"]:
+            assert isinstance(scheme_status["scheme"], str) and len(scheme_status["scheme"]) > 0
+            assert isinstance(scheme_status["status"], str) and len(scheme_status["status"]) > 0
         assert isinstance(s["last_updated"], str) and len(s["last_updated"]) > 0
         assert isinstance(s["url"], str) and "/Stations/" in s["url"]
 
