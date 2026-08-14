@@ -5,6 +5,56 @@ Description: >
 
   AWS lambda function for running https://github.com/cbility/RER-API-wrapper
 
+Parameters:
+  REREmail:
+    Type: String
+    Default: ""
+  RERPassword:
+    Type: String
+    NoEcho: true
+    Default: ""
+  GmailTokenJson:
+    Type: String
+    NoEcho: true
+    Default: ""
+  GmailTokenFile:
+    Type: String
+    Default: ""
+  SmartSuiteApiUrl:
+    Type: String
+    Default: "https://app.smartsuite.com/api/v1"
+  SmartSuiteApiToken:
+    Type: String
+    NoEcho: true
+    Default: ""
+  SmartSuiteAccountId:
+    Type: String
+    Default: ""
+  SmartSuiteTableId:
+    Type: String
+    Default: ""
+  SmartSuiteRecordId:
+    Type: String
+    Default: ""
+  SmartSuiteCookiesField:
+    Type: String
+    Default: "session_cookies"
+  SmartSuiteRefreshedAtField:
+    Type: String
+    Default: ""
+  SmartSuiteTimeoutSeconds:
+    Type: String
+    Default: "30"
+  RerMfaMaxRetries:
+    Type: String
+    Default: "5"
+  RerMfaWaitSeconds:
+    Type: String
+    Default: "10"
+  PlaywrightHeadless:
+    Type: String
+    Default: "true"
+
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
@@ -38,6 +88,57 @@ Resources:
             Auth:
               ApiKeyRequired: true
 
+  RERSessionAuthApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Auth:
+        ApiKeyRequired: true
+
+  RERSessionAuthFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Timeout: 300
+      MemorySize: 2048
+      Architectures:
+        - x86_64
+      Environment:
+        Variables:
+          PLAYWRIGHT_HEADLESS: !Ref PlaywrightHeadless
+          RER_MFA_MAX_RETRIES: !Ref RerMfaMaxRetries
+          RER_MFA_WAIT_SECONDS: !Ref RerMfaWaitSeconds
+          RER_EMAIL: !Ref REREmail
+          RER_PASSWORD: !Ref RERPassword
+          GMAIL_TOKEN_JSON: !Ref GmailTokenJson
+          GMAIL_TOKEN_FILE: !Ref GmailTokenFile
+          SMARTSUITE_API_URL: !Ref SmartSuiteApiUrl
+          SMARTSUITE_API_TOKEN: !Ref SmartSuiteApiToken
+          SMARTSUITE_ACCOUNT_ID: !Ref SmartSuiteAccountId
+          SMARTSUITE_TABLE_ID: !Ref SmartSuiteTableId
+          SMARTSUITE_RECORD_ID: !Ref SmartSuiteRecordId
+          SMARTSUITE_COOKIES_FIELD: !Ref SmartSuiteCookiesField
+          SMARTSUITE_REFRESHED_AT_FIELD: !Ref SmartSuiteRefreshedAtField
+          SMARTSUITE_TIMEOUT_SECONDS: !Ref SmartSuiteTimeoutSeconds
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: lambda:InvokeFunction
+              Resource: !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${AWS::StackName}-RERSessionAuthFunction-*"
+      Events:
+        CookieRoute:
+          Type: Api
+          Properties:
+            RestApiId: !Ref RERSessionAuthApi
+            Path: /
+            Method: get
+            Auth:
+              ApiKeyRequired: true
+    Metadata:
+      DockerContext: session_auth
+      Dockerfile: Dockerfile
+      DockerTag: python3.12-playwright-v1
+
   RERWrapperApiUsagePlan:
     Type: AWS::ApiGateway::UsagePlan
     DependsOn:
@@ -46,6 +147,16 @@ Resources:
       UsagePlanName: RERWrapperUsagePlan
       ApiStages:
         - ApiId: !Ref RERWrapperApi
+          Stage: Prod
+
+  RERSessionAuthApiUsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    DependsOn:
+      - RERSessionAuthApiProdStage
+    Properties:
+      UsagePlanName: RERSessionAuthUsagePlan
+      ApiStages:
+        - ApiId: !Ref RERSessionAuthApi
           Stage: Prod
 
   RERWrapperApiKeyOne:
@@ -59,6 +170,12 @@ Resources:
     Properties:
       Enabled: true
       Name: RERWrapperApiKeyTwo
+
+  RERSessionAuthApiKey:
+    Type: AWS::ApiGateway::ApiKey
+    Properties:
+      Enabled: true
+      Name: RERSessionAuthApiKey
 
   RERWrapperUsagePlanKeyOne:
     Type: AWS::ApiGateway::UsagePlanKey
@@ -74,13 +191,29 @@ Resources:
       KeyType: API_KEY
       UsagePlanId: !Ref RERWrapperApiUsagePlan
 
+  RERSessionAuthUsagePlanKey:
+    Type: AWS::ApiGateway::UsagePlanKey
+    Properties:
+      KeyId: !Ref RERSessionAuthApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref RERSessionAuthApiUsagePlan
+
 Outputs:
   RERWrapperApiUrl:
     Description: "API Gateway endpoint URL for the RER wrapper"
     Value: !Sub "https://${RERWrapperApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/"
+  RERSessionAuthApiUrl:
+    Description: "API Gateway endpoint URL for the RER session auth proxy"
+    Value: !Sub "https://${RERSessionAuthApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/"
   RERWrapperFunction:
     Description: "RER wrapper Lambda Function ARN"
     Value: !GetAtt RERWrapperFunction.Arn
+  RERSessionAuthFunction:
+    Description: "RER session auth Lambda Function ARN"
+    Value: !GetAtt RERSessionAuthFunction.Arn
   RERWrapperFunctionIamRole:
     Description: "Implicit IAM Role created for RER wrapper"
     Value: !GetAtt RERWrapperFunctionRole.Arn
+  RERSessionAuthFunctionIamRole:
+    Description: "Implicit IAM Role created for RER session auth proxy"
+    Value: !GetAtt RERSessionAuthFunctionRole.Arn
