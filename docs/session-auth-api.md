@@ -64,6 +64,10 @@ You can also pass `recipientReference` as a query parameter, but JSON body input
 
 ## Required Lambda Configuration
 
+Deploy the stack with `scripts/deploy.sh` from the repository root. It loads the
+values below from `.env` and passes them as CloudFormation parameters. Do not
+run plain `sam deploy` afterward, because it will not load `.env`.
+
 The deployed session-auth Lambda expects these environment variables to be configured:
 
 - `RER_EMAIL`

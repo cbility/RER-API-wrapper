@@ -18,6 +18,39 @@ Install from Git in another repo with:
 uv add git+https://github.com/ORG/RER-API-wrapper.git
 ```
 
+## Build and Deploy
+
+The session-auth Lambda is deployed as a Docker image, so Docker, AWS CLI, and
+SAM CLI must be installed and configured for the `eu-west-2` region.
+
+Create a local `.env` file with the deployment values. It must include:
+
+```dotenv
+RER_EMAIL=...
+RER_PASSWORD=...
+GMAIL_TOKEN_JSON='...authorized-user-token-json...'
+SMARTSUITE_API_TOKEN=...
+SMARTSUITE_ACCOUNT_ID=...
+SMARTSUITE_TABLE_ID=...
+SMARTSUITE_RECORD_ID=...
+SMARTSUITE_COOKIES_FIELD=...
+```
+
+Keep `.env` out of version control. Build the Lambda image without using a stale
+dependency cache, then deploy the infrastructure and synchronize the Lambda
+environment separately:
+
+```bash
+sam build --no-cached
+sam deploy
+./scripts/sync-session-auth-env.sh
+```
+
+Run `sam deploy` after code or infrastructure changes. Run
+`./scripts/sync-session-auth-env.sh` after every deployment and whenever `.env`
+values change. The sync script preserves JSON values such as `GMAIL_TOKEN_JSON`
+by updating the Lambda environment through the AWS CLI structured JSON API.
+
 ## Getting started
 
 To use the package you need authenticated RER cookies. The helper script at `test/bootstrap_rer_cookies.py` can regenerate local cookies for development.

@@ -5,6 +5,56 @@ Description: >
 
   AWS lambda function for running https://github.com/cbility/RER-API-wrapper
 
+Parameters:
+  REREmail:
+    Type: String
+    Default: ""
+  RERPassword:
+    Type: String
+    NoEcho: true
+    Default: ""
+  GmailTokenJson:
+    Type: String
+    NoEcho: true
+    Default: ""
+  GmailTokenFile:
+    Type: String
+    Default: ""
+  SmartSuiteApiUrl:
+    Type: String
+    Default: "https://app.smartsuite.com/api/v1"
+  SmartSuiteApiToken:
+    Type: String
+    NoEcho: true
+    Default: ""
+  SmartSuiteAccountId:
+    Type: String
+    Default: ""
+  SmartSuiteTableId:
+    Type: String
+    Default: ""
+  SmartSuiteRecordId:
+    Type: String
+    Default: ""
+  SmartSuiteCookiesField:
+    Type: String
+    Default: "session_cookies"
+  SmartSuiteRefreshedAtField:
+    Type: String
+    Default: ""
+  SmartSuiteTimeoutSeconds:
+    Type: String
+    Default: "30"
+  RerMfaMaxRetries:
+    Type: String
+    Default: "5"
+  RerMfaWaitSeconds:
+    Type: String
+    Default: "10"
+  PlaywrightHeadless:
+    Type: String
+    Default: "true"
+
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
@@ -55,21 +105,21 @@ Resources:
         - x86_64
       Environment:
         Variables:
-          PLAYWRIGHT_HEADLESS: "true"
-          RER_MFA_MAX_RETRIES: "5"
-          RER_MFA_WAIT_SECONDS: "10"
-          RER_EMAIL: ""
-          RER_PASSWORD: ""
-          GMAIL_TOKEN_JSON: ""
-          GMAIL_TOKEN_FILE: ""
-          SMARTSUITE_API_URL: ""
-          SMARTSUITE_API_TOKEN: ""
-          SMARTSUITE_ACCOUNT_ID: ""
-          SMARTSUITE_TABLE_ID: ""
-          SMARTSUITE_RECORD_ID: ""
-          SMARTSUITE_COOKIES_FIELD: "session_cookies"
-          SMARTSUITE_REFRESHED_AT_FIELD: ""
-          SMARTSUITE_TIMEOUT_SECONDS: "30"
+          PLAYWRIGHT_HEADLESS: !Ref PlaywrightHeadless
+          RER_MFA_MAX_RETRIES: !Ref RerMfaMaxRetries
+          RER_MFA_WAIT_SECONDS: !Ref RerMfaWaitSeconds
+          RER_EMAIL: !Ref REREmail
+          RER_PASSWORD: !Ref RERPassword
+          GMAIL_TOKEN_JSON: !Ref GmailTokenJson
+          GMAIL_TOKEN_FILE: !Ref GmailTokenFile
+          SMARTSUITE_API_URL: !Ref SmartSuiteApiUrl
+          SMARTSUITE_API_TOKEN: !Ref SmartSuiteApiToken
+          SMARTSUITE_ACCOUNT_ID: !Ref SmartSuiteAccountId
+          SMARTSUITE_TABLE_ID: !Ref SmartSuiteTableId
+          SMARTSUITE_RECORD_ID: !Ref SmartSuiteRecordId
+          SMARTSUITE_COOKIES_FIELD: !Ref SmartSuiteCookiesField
+          SMARTSUITE_REFRESHED_AT_FIELD: !Ref SmartSuiteRefreshedAtField
+          SMARTSUITE_TIMEOUT_SECONDS: !Ref SmartSuiteTimeoutSeconds
       Policies:
         - Statement:
             - Effect: Allow

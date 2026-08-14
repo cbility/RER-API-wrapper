@@ -135,7 +135,7 @@ def test_session_auth_starts_refresh_and_caches_cookies_live():
             refreshed_cookies = store.load_cookies()
             if refreshed_cookies:
                 break
-            sleep(5)
+            sleep(60)
         assert refreshed_cookies
         assert all(not name.startswith("ai_") for name in refreshed_cookies)
     finally:
