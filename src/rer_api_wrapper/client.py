@@ -1,5 +1,6 @@
 # region imports
 
+import calendar
 import logging # for logging
 
 import requests # lighttweight web requests
@@ -190,7 +191,7 @@ class RER_wrapper:
         response = self._request(f"Organisations/Stations/{station_id}")
         return rer_parsing._parse_station(response.text, station_id)
 
-    def find_organisation(
+    def find_transfer_organisation(
         self,
         organisation_id: str,
         recipient_reference: str,
@@ -223,6 +224,82 @@ class RER_wrapper:
         """GET /Organisations/{organisationId}/Certificates/{certType}/Breakdown - Returns certificate breakdown."""
         response = self._request(f"Organisations/{organisation_id}/Certificates/{cert_type}/Breakdown")
         return rer_parsing._parse_certificate_breakdown(response.text, organisation_id, cert_type)
+
+    def select_certificates(
+        self,
+        organisation_id: str,
+        cert_type: str,
+        station: str,
+        start_period: str,
+        end_period: str,
+    ) -> None:
+        """Select certificate ranges for a station over an inclusive period range.
+
+        The portal selection is shared state. To prevent an unintended transfer,
+        this method refuses to alter an existing selection.
+        """
+        cert_type = cert_type.upper()
+        if cert_type not in {"ROC", "REGO"}:
+            raise ValueError("cert_type must be either 'ROC' or 'REGO'.")
+
+        try:
+            start_month, start_year = start_period.split()
+            end_month, end_year = end_period.split()
+            start_index = (int(start_year), list(calendar.month_abbr).index(start_month))
+            end_index = (int(end_year), list(calendar.month_abbr).index(end_month))
+        except (ValueError, IndexError):
+            raise ValueError("Periods must use the format 'Mon YYYY', for example 'Apr 2025'.") from None
+        if start_index > end_index:
+            raise ValueError("start_period must not be after end_period.")
+
+        endpoint = f"Organisations/{organisation_id}/Certificates/{cert_type}/Breakdown"
+        response = self._request(endpoint)
+        tree = HTMLParser(response.text)
+
+        if tree.css_first("button[name=removeId]"):
+            raise ValueError(
+                "Certificates are already selected in the portal. Clear the existing selection before selecting a range."
+            )
+
+        matches: list[str] = []
+        for row in tree.css("table tr"):
+            cells = row.css("td")
+            selection = row.css_first("input[name=selectedCertificates]")
+            if (
+                len(cells) >= 6
+                and selection
+                and cells[2].text(strip=True) == station
+            ):
+                try:
+                    month, year = cells[4].text(strip=True).split()
+                    period_index = (int(year), list(calendar.month_abbr).index(month))
+                except (ValueError, IndexError):
+                    continue
+                if start_index <= period_index <= end_index:
+                    certificate_id = selection.attrs.get("value")
+                    if certificate_id:
+                        matches.append(certificate_id)
+
+        if not matches:
+            raise ValueError(
+                f"No {cert_type} certificate ranges match station {station!r} between "
+                f"{start_period!r} and {end_period!r}."
+            )
+
+        token_el = tree.css_first("input[name=__RequestVerificationToken]")
+        csrf = token_el.attrs.get("value") if token_el else None
+        if not csrf:
+            raise ValueError("Certificate selection form did not include a verification token.")
+
+        self._request(
+            endpoint,
+            method="POST",
+            data={
+                "selectedCertificates": matches,
+                "addSelected": "addSelected",
+                "__RequestVerificationToken": csrf,
+            },
+        )
 
     def get_organisation_certificates_history(
         self,
