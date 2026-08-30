@@ -9,6 +9,7 @@ dependencies = [
     "python-dotenv>=1.2.1",
     "requests>=2.32.5",
     "selectolax>=0.4.7",
+    "smartsuite-python",
     "types-requests>=2.33.0.20260518",
 ]
 
@@ -36,3 +37,6 @@ dev = [
 [tool.mypy]
 python_version = "3.12"
 mypy_path = ["src", "session_auth"]
+
+[tool.uv.sources]
+smartsuite-python = { git = "https://github.com/cbility/smartsuite-python.git" }
