@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Literal
 
 
 @dataclass(frozen=True)
@@ -12,16 +12,7 @@ class TransferInstruction:
     end_period: str
     certificate_type: str = "REGO"
 
-
-@dataclass(frozen=True)
-class ScraperOperations:
-    refresh_data: bool = False
-    transfers: list[TransferInstruction] = field(default_factory=list)
-
-    @property
-    def has_work(self) -> bool:
-        return self.refresh_data or bool(self.transfers)
-
+ScraperOperations = Literal["refresh_data", "transfer_certificates"]
 
 @dataclass
 class RefreshResult:

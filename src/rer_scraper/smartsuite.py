@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from smartsuite_python import SmartSuiteClient, FilterElement, FilterDateValue, FilterDateMode
 from dataclasses import asdict
-from typing import Any, Literal, Sequence
+from datetime import datetime
 
 from rer_scraper.models import ScraperOperations
 
@@ -35,19 +35,28 @@ class RERSmartSuiteClient(SmartSuiteClient):
             api_token=api_token,
         )
 
-    def get_operations(self) -> ScraperOperations:
+    def get_operations(self, launch_time: datetime) -> list[ScraperOperations]:
         """Return pending scraper work once the SmartSuite schema is configured."""
-        raise NotImplementedError
-        scraper_filter = {
-            "field": "s902579400", # Scraper field
-            "comparison": "is",
-            "value": "6a7104dc65c1e43caf1f2792" # RER Scraper record ID
-        }
-        next_run_filter = FilterElement(
-                    field= "s8173a46ec", # Run Next After field
-                    comparison = "is",
-                    value = {"date_mode":"today", "date_mode_value":""}
+        scraper_filter = FilterElement(
+            field="s902579400", # Scraper field
+            comparison= "is",
+            value="6a7104dc65c1e43caf1f2792" # RER Scraper record ID
         )
-        self.ss.filter_records(table_id="663d2313b4e7828a33b1ac07", # Scraper job configuration table
+        next_run_filter = FilterElement(
+            field= "s8173a46ec", # Run Next After field
+            comparison = "is_on_or_after",
+            value = FilterDateValue(date_mode="exact_date", date_mode_value=launch_time.isoformat())
+        )
+        operations_records = self.ss.filter_records(table_id="663d2313b4e7828a33b1ac07", # Scraper job configuration table
                                fields_to_filter=[scraper_filter, next_run_filter])
-        return ScraperOperations()
+
+        operations: list[ScraperOperations] = []
+
+        for record in operations_records:
+            match (record["id"]):
+                case "6a8328cb2f59c6c95139943d": # data update record id
+                    operations.append("refresh_data")
+                case "6a832d732f59c6c951399446": # certificate transfer record id
+                    operations.append("transfer_certificates")
+
+        return operations
