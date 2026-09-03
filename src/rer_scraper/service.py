@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import asdict
 from typing import Any, Callable, Protocol
+from datetime import datetime
 
 import requests
 
@@ -14,7 +15,7 @@ from rer_scraper.models import (
     TransferInstruction,
     TransferPreparationResult,
 )
-from rer_scraper.smartsuite import SmartSuiteClient
+from rer_scraper.smartsuite import RERSmartSuiteClient
 
 import logging
 # logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -49,7 +50,7 @@ class SessionAuthClient:
 class RERScraperService:
     def __init__(
         self,
-        smartsuite: SmartSuiteClient,
+        smartsuite: RERSmartSuiteClient,
         session_auth: SessionAuthClient,
         retry_invoker: RetryInvoker,
         function_name: str,
@@ -62,9 +63,10 @@ class RERScraperService:
         self.wrapper_factory = wrapper_factory
 
     def run(self, schedule_retry: bool = True) -> tuple[int, ScraperResult | None]:
-        operations = self.smartsuite.get_operations()
-        if not operations.has_work:
-            return 204, None
+        run_start = datetime.now()
+        operations = self.smartsuite.get_operations(run_start)
+        if len(operations) == 0:
+            return 204, None # successful run but no tasks scheduled
 
         cookies = self.session_auth.get_cookies()
         if cookies is None:
@@ -74,12 +76,18 @@ class RERScraperService:
 
         rer = self.wrapper_factory(cookies)
         result = ScraperResult()
-        if operations.refresh_data:
-            organisations, stations, certificates = self.refresh_data(rer)
+        if "refresh_data" in operations:
+            organisations, stations, certificates = self.get_current_data(rer)
+            self.smartsuite.update_rer_data(organisations, stations, certificates)
+        
+
+        if "transfer_certificates" in operations:
+            raise NotImplementedError
         result.transfer_results = [self.prepare_transfer(rer, transfer) for transfer in operations.transfers]
+
         return 200, result
 
-    def refresh_data(self, rer: RER_wrapper):
+    def get_current_data(self, rer: RER_wrapper):
         organisations = rer.get_user_organisations()
         logger.debug(organisations)
         organisation_stations = [

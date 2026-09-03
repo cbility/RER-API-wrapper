@@ -48,7 +48,7 @@ def scraper() -> RERScraperService:
 
 
 def test_print_refresh_data(scraper: RERScraperService, wrapper: RER_wrapper):
-    organisations, stations, certificates = scraper.refresh_data(wrapper)
+    organisations, stations, certificates = scraper.get_current_data(wrapper)
 
     print("Organisations:")
     print(json.dumps(organisations, default=asdict, indent=2))
