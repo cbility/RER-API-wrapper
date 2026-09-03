@@ -38,6 +38,8 @@ class RERSmartSuiteClient(SmartSuiteClient):
             api_token=api_token,
         )
 
+# region getters
+
     def get_operations(self, launch_time: datetime) -> list[ScraperOperations]:
         """Return pending scraper work once the SmartSuite schema is configured."""
         scraper_filter = FilterElement(
@@ -72,36 +74,57 @@ class RERSmartSuiteClient(SmartSuiteClient):
             current_organisations = self.ss.get_all_records(table_id = self.table_id_ro_stations)
             return current_organisations
 
-    def update_rer_data(self,
-                        organisations: list[OrganisationSummary],
-                        stations: list[OrganisationStation], 
-                        certificates: list[CertificatesOverview]
-        ):
-        """
-        Updates organisation and station records on SmartSuite with the passed details.
-        Updates records if they already exist, otherwise creates new records.
-        Certificate information is used to create statistics and stores at the station level.
-        """
+    def get_organisation_id(self, organisation_record: dict):
+        return organisation_record.get("s44395f753")
 
-        raise NotImplementedError("This method is not yet implemented.")
+    def get_station_id(self, station_record: dict):
+            return station_record.get("sb2a2fadfb")
+    #endregion getters
+
+    # region mappers
+
+    def map_organisation(self, rer_organisation: OrganisationSummary):
+        ss_organisation = {
+            "sde6082ea0": rer_organisation.name, # generator/company name
+            "s44395f753": rer_organisation.organisation_id, # organisation id
+            "s90b4a920a": rer_organisation.type,
+            "sf3acd7357": rer_organisation.status,
+        }
+        return ss_organisation
+
+    def map_station(self, rer_station: OrganisationStation, certificates: list[CertificatesOverview], update_time: datetime):
+        ro_scheme_status = "Not Set"
+        rego_scheme_status = "Not Set"
+        for scheme in rer_station.scheme_statuses:
+            if scheme.scheme == "RO":
+                ro_scheme_status = scheme.status
+            elif scheme.scheme == "REGO":
+                rego_scheme_status = scheme.status
+
+        for cert in certificates:
+            pass # TODO: add certificate statistics to station mapping
+        ss_station = {
+            "sb2a2fadfb": rer_station.station_id, # station id
+            "sde6082ea0": rer_station.station_name, # station name
+            "sf6261a94b": ro_scheme_status, # RO scheme status
+            "sxyont8b": rego_scheme_status, # REGO scheme status
+            "secb786709": rer_station.country, #  country
+            "secb786709": rer_station.technology_group , # technology
+            "s9c6cfc3d3": {"date": update_time.isoformat()}, # statistics last updated
+             "sqih0nxo": {"date": update_time.isoformat()}, # oldest regos not issued
+        }
+        return ss_station
+
+    # endregion mappers
+
+    # region changes
+
+    def update_organisations(self, update_orgs: list[dict]):
+        self.ss.bulk_update_records(table_id=self.table_id_ro_organisations, records=update_orgs)
+
+    def create_organisations(self, new_orgs: list[dict]):
+        self.ss.bulk_add_new_records(table_id=self.table_id_ro_organisations, records=new_orgs)
+
     
-        org_id_field = "s44395f753" # Organisation reference
-
-        ss_organisations = self.get_current_organisations()
-        ss_stations = self.get_current_stations()
-
-        
-        existing_orgs = []
-        non_existing_orgs = []
-        for org in organisations:
-            if org.organisation_id in [ss_org[org_id_field] for ss_org in ss_organisations]:
-                existing_orgs.append(org)
-            else:
-                non_existing_orgs.append(org)
-
-        existing_stations = []
-        non_existing_stations = []
-        for station in stations:
-            if station
 
 
