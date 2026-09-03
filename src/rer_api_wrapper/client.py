@@ -181,7 +181,7 @@ class RER_wrapper:
         response = self._request(f"Organisations/{organisation_id}/StationDeclarations")
         return rer_parsing._parse_station_declarations(response.text, organisation_id)
 
-    def get_organisation_stations(self, organisation_id: str) -> rer_parsing.OrganisationStationList:
+    def get_organisation_stations(self, organisation_id: str) -> list[rer_parsing.OrganisationStation]:
         """GET /Organisations/{organisationId}/Stations - Returns list of stations for the organisation."""
         response = self._request(f"Organisations/{organisation_id}/Stations")
         return rer_parsing._parse_organisation_stations(response.text, organisation_id)

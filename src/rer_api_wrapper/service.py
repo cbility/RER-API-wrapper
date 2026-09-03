@@ -10,7 +10,7 @@ from rer_api_wrapper.models import (
     RERRequest,
     OrganisationDetail,
     OrganisationSearchResult,
-    OrganisationStationList,
+    OrganisationStation,
     OrganisationSummary,
     OutputDataTaskList,
     StationDeclarationList,
@@ -146,7 +146,7 @@ class RERService:
     def get_organisation_station_declarations(self, organisation_id: str) -> StationDeclarationList:
         return self.wrapper.get_organisation_station_declarations(organisation_id)
 
-    def get_organisation_stations(self, organisation_id: str) -> OrganisationStationList:
+    def get_organisation_stations(self, organisation_id: str) -> list[OrganisationStation]:
         return self.wrapper.get_organisation_stations(organisation_id)
 
     def get_station(self, station_id: str) -> StationDetail:

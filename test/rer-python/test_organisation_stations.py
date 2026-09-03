@@ -5,7 +5,6 @@ from dataclasses import asdict
 import pytest
 
 from rer_api_wrapper import RER_wrapper
-from rer_api_wrapper.models import OrganisationStationList
 
 
 COOKIES_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'rer_cookies.json')
@@ -25,42 +24,40 @@ def stations(wrapper):
     return wrapper.get_organisation_stations(ORG_ID)
 
 
-def test_returns_dict(stations):
-    assert isinstance(stations, OrganisationStationList)
-
-
-def test_organisation_id_is_correct(stations):
-    assert stations["organisation_id"] == ORG_ID
-
-
-def test_stations_is_list(stations):
-    assert isinstance(stations["stations"], list)
+def test_returns_list(stations):
+    assert isinstance(stations, list)
 
 
 def test_stations_nonempty(stations):
-    assert len(stations["stations"]) > 0
+    assert len(stations) > 0
 
 
 def test_each_station_has_required_fields(stations):
-    for s in stations["stations"]:
-        assert isinstance(s["station_id"], str) and len(s["station_id"]) > 0
-        assert isinstance(s["station_name"], str) and len(s["station_name"]) > 0
-        assert isinstance(s["organisation_name"], str) and len(s["organisation_name"]) > 0
-        assert isinstance(s["country"], str) and len(s["country"]) > 0
-        assert isinstance(s["technology_group"], str) and len(s["technology_group"]) > 0
-        assert isinstance(s["scheme_statuses"], list) and len(s["scheme_statuses"]) > 0
-        for scheme_status in s["scheme_statuses"]:
-            assert isinstance(scheme_status["scheme"], str) and len(scheme_status["scheme"]) > 0
-            assert isinstance(scheme_status["status"], str) and len(scheme_status["status"]) > 0
-        assert isinstance(s["last_updated"], str) and len(s["last_updated"]) > 0
-        assert isinstance(s["url"], str) and "/Stations/" in s["url"]
+    for s in stations:
+        assert isinstance(s.station_id, str) and len(s.station_id) > 0
+        assert isinstance(s.station_name, str) and len(s.station_name) > 0
+        assert isinstance(s.organisation_id, str) and len(s.organisation_id) > 0
+        assert isinstance(s.organisation_name, str) and len(s.organisation_name) > 0
+        assert isinstance(s.country, str) and len(s.country) > 0
+        assert isinstance(s.technology_group, str) and len(s.technology_group) > 0
+        assert isinstance(s.scheme_statuses, list) and len(s.scheme_statuses) > 0
+        for scheme_status in s.scheme_statuses:
+            assert isinstance(scheme_status.scheme, str) and len(scheme_status.scheme) > 0
+            assert isinstance(scheme_status.status, str) and len(scheme_status.status) > 0
+        assert isinstance(s.last_updated, str) and len(s.last_updated) > 0
+        assert isinstance(s.url, str) and "/Stations/" in s.url
 
 
 def test_station_ids_are_uuids(stations):
     import re
     uuid_pattern = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', re.IGNORECASE)
-    for s in stations["stations"]:
-        assert uuid_pattern.match(s["station_id"]), f"Not a UUID: {s['station_id']}"
+    for s in stations:
+        assert uuid_pattern.match(s.station_id), f"Not a UUID: {s.station_id}"
+
+
+def test_organisation_id_is_correct(stations):
+    for s in stations:
+        assert s.organisation_id == ORG_ID
 
 
 def test_print_raw(stations):

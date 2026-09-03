@@ -5,7 +5,7 @@ from smartsuite_python import SmartSuiteClient, FilterElement, FilterDateValue, 
 from dataclasses import asdict
 from datetime import datetime
 
-from rer_api_wrapper.models import CertificatesOverview, OrganisationStationList, OrganisationSummary
+from rer_api_wrapper.models import CertificatesOverview, OrganisationStation, OrganisationSummary
 from rer_scraper.models import ScraperOperations
 
 
@@ -74,7 +74,7 @@ class RERSmartSuiteClient(SmartSuiteClient):
 
     def update_rer_data(self,
                         organisations: list[OrganisationSummary],
-                        stations: list[OrganisationStationList], 
+                        stations: list[OrganisationStation], 
                         certificates: list[CertificatesOverview]
         ):
         """

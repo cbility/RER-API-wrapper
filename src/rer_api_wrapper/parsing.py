@@ -13,7 +13,6 @@ from rer_api_wrapper.models import (
     OrganisationDetail,
     OrganisationSearchResult,
     OrganisationStation,
-    OrganisationStationList,
     OrganisationSummary,
     OrganisationTab,
     OutputDataTask,
@@ -213,7 +212,7 @@ def _parse_station_declarations(html: str, organisation_id: str) -> StationDecla
 
     return StationDeclarationList(organisation_id=organisation_id, declarations=declarations)
 
-def _parse_organisation_stations(html: str, organisation_id: str) -> OrganisationStationList:
+def _parse_organisation_stations(html: str, organisation_id: str) -> list[OrganisationStation]:
     tree = HTMLParser(html)
     stations: list[OrganisationStation] = []
 
@@ -238,6 +237,7 @@ def _parse_organisation_stations(html: str, organisation_id: str) -> Organisatio
         stations.append(OrganisationStation(
             station_id=station_id,
             station_name=cells[1].text(strip=True),
+            organisation_id=organisation_id,
             organisation_name=cells[0].text(strip=True),
             country=cells[3].text(strip=True),
             technology_group=cells[4].text(strip=True),
@@ -246,7 +246,7 @@ def _parse_organisation_stations(html: str, organisation_id: str) -> Organisatio
             url=url,
         ))
 
-    return OrganisationStationList(organisation_id=organisation_id, stations=stations)
+    return stations
 
 def _parse_station(html: str, station_id: str) -> StationDetail:
     tree = HTMLParser(html)

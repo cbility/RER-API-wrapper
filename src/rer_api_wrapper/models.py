@@ -119,18 +119,13 @@ class StationSchemeStatus(RERModel):
 class OrganisationStation(RERModel):
     station_id: str
     station_name: str
+    organisation_id: str
     organisation_name: str
     country: str
     technology_group: str
     scheme_statuses: list[StationSchemeStatus]
     last_updated: str
     url: str
-
-
-@dataclass
-class OrganisationStationList(RERModel):
-    organisation_id: str
-    stations: list[OrganisationStation]
 
 
 @dataclass
