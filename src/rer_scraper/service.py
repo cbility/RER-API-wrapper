@@ -236,7 +236,7 @@ class RERScraperService:
                 insert_orgs.append(self.smartsuite.map_organisation(org))
 
         logger.info(
-            f"Found {len(update_orgs)} orgs to be created and {len(insert_orgs)} to be created"
+            f"Found {len(update_orgs)} orgs to be updated and {len(insert_orgs)} to be created"
         )
         logger.debug(f"Orgs to update: {update_orgs}")
         logger.debug(f"Orgs to create: {insert_orgs}")
