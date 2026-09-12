@@ -4,8 +4,13 @@ import json
 import os
 from typing import Any
 
-from rer_scraper.service import RERScraperService, RetryInvoker, SessionAuthClient, result_body
-from rer_scraper.smartsuite import SmartSuiteClient
+from rer_scraper.service import (
+    RERScraperService,
+    RetryInvoker,
+    SessionAuthClient,
+    result_body,
+)
+from rer_scraper.smartsuite import RERSmartSuiteClient
 
 
 class SessionRefreshPending(RuntimeError):
@@ -30,13 +35,26 @@ def build_service() -> RERScraperService:
     function_name = os.getenv("AWS_LAMBDA_FUNCTION_NAME")
     auth_api_url = os.getenv("RER_SESSION_AUTH_API_URL")
     auth_api_key = os.getenv("RER_SESSION_AUTH_API_KEY_VALUE")
+    smartsuite_account_id = os.getenv("SMARTSUITE_ACCOUNT_ID")
+    smartsuite_api_key = os.getenv("SMARTSUITE_API_KEY")
+
     if not function_name:
-        raise RuntimeError("AWS_LAMBDA_FUNCTION_NAME is required to schedule a scraper retry.")
+        raise RuntimeError(
+            "AWS_LAMBDA_FUNCTION_NAME is required to schedule a scraper retry."
+        )
     if not auth_api_url or not auth_api_key:
-        raise RuntimeError("Set RER_SESSION_AUTH_API_URL and RER_SESSION_AUTH_API_KEY_VALUE.")
+        raise RuntimeError(
+            "Set RER_SESSION_AUTH_API_URL and RER_SESSION_AUTH_API_KEY_VALUE environment variables."
+        )
+    if not smartsuite_account_id or not smartsuite_api_key:
+        raise RuntimeError(
+            "Set SMARTSUITE_ACCOUNT_ID and SMARTSUITE_API_KEY environment variables."
+        )
 
     return RERScraperService(
-        smartsuite=SmartSuiteClient.from_env(),
+        smartsuite=RERSmartSuiteClient(
+            account_id=smartsuite_account_id, api_token=smartsuite_api_key
+        ),
         session_auth=SessionAuthClient(auth_api_url, auth_api_key),
         retry_invoker=Boto3RetryInvoker(),
         function_name=function_name,
