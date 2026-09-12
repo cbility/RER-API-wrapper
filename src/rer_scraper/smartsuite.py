@@ -1,11 +1,20 @@
 from __future__ import annotations
 
 import os
-from smartsuite_python import SmartSuiteClient, FilterElement, FilterDateValue, FilterDateMode
+from smartsuite_python import (
+    SmartSuiteClient,
+    FilterElement,
+    FilterDateValue,
+    FilterDateMode,
+)
 from dataclasses import asdict
 from datetime import datetime
 
-from rer_api_wrapper.models import CertificatesOverview, OrganisationStation, OrganisationSummary
+from rer_api_wrapper.models import (
+    CertificatesOverview,
+    OrganisationStation,
+    OrganisationSummary,
+)
 from rer_scraper.models import ScraperOperations
 
 
@@ -13,7 +22,9 @@ class RERSmartSuiteClient(SmartSuiteClient):
     """Owns SmartSuite HTTP access and scraper-specific record mappings."""
 
     # record ids
-    record_id_rer_scaper = "6a7104dc65c1e43caf1f2792", # smartsuite record ID belonging to the record for the scraper
+    record_id_rer_scaper = (
+        "6a7104dc65c1e43caf1f2792",
+    )  # smartsuite record ID belonging to the record for the scraper
 
     # table ids
     table_id_scraper_job_configuration_table_id = "663d2313b4e7828a33b1ac07"
@@ -28,71 +39,85 @@ class RERSmartSuiteClient(SmartSuiteClient):
         account_id = os.getenv("SMARTSUITE_ACCOUNT_ID")
         if account_id is None:
             raise ValueError("SMARTSUITE_ACCOUNT_ID is not included in .env file.")
-        
+
         api_token = os.getenv("SMARTSUITE_API_TOKEN")
         if api_token is None:
             raise ValueError("SMARTSUITE_API_TOKEN is not included in .env file.")
-        
+
         return cls(
             account_id=account_id,
             api_token=api_token,
         )
 
-# region getters
+    # region getters
 
     def get_operations(self, launch_time: datetime) -> list[ScraperOperations]:
         """Return pending scraper work once the SmartSuite schema is configured."""
         scraper_filter = FilterElement(
-            field="s902579400", # Scraper field
-            comparison= "is",
-            value="6a7104dc65c1e43caf1f2792" # RER Scraper record ID
+            field="s902579400",  # Scraper field
+            comparison="is",
+            value="6a7104dc65c1e43caf1f2792",  # RER Scraper record ID
         )
         next_run_filter = FilterElement(
-            field= "s8173a46ec", # Run Next After field
-            comparison = "is_on_or_after",
-            value = FilterDateValue(date_mode="exact_date", date_mode_value=launch_time.isoformat())
+            field="s8173a46ec",  # Run Next After field
+            comparison="is_on_or_after",
+            value=FilterDateValue(
+                date_mode="exact_date", date_mode_value=launch_time.isoformat()
+            ),
         )
-        operations_records = self.ss.filter_records(table_id="663d2313b4e7828a33b1ac07", # Scraper job configuration table
-                               fields_to_filter=[scraper_filter, next_run_filter])
+        operations_records = self.ss.filter_records(
+            table_id="663d2313b4e7828a33b1ac07",  # Scraper job configuration table
+            fields_to_filter=[scraper_filter, next_run_filter],
+        )
 
         operations: list[ScraperOperations] = []
 
         for record in operations_records:
             match (record["id"]):
-                case "6a8328cb2f59c6c95139943d": # data update record id
+                case "6a8328cb2f59c6c95139943d":  # data update record id
                     operations.append("refresh_data")
-                case "6a832d732f59c6c951399446": # certificate transfer record id
+                case "6a832d732f59c6c951399446":  # certificate transfer record id
                     operations.append("transfer_certificates")
 
         return operations
 
     def get_current_organisations(self):
-        current_organisations = self.ss.get_all_records(table_id = self.table_id_ro_organisations)
+        current_organisations = self.ss.get_all_records(
+            table_id=self.table_id_ro_organisations
+        )
         return current_organisations
 
     def get_current_stations(self):
-            current_organisations = self.ss.get_all_records(table_id = self.table_id_ro_stations)
-            return current_organisations
+        current_organisations = self.ss.get_all_records(
+            table_id=self.table_id_ro_stations
+        )
+        return current_organisations
 
     def get_organisation_id(self, organisation_record: dict):
         return organisation_record.get("s44395f753")
 
     def get_station_id(self, station_record: dict):
-            return station_record.get("sb2a2fadfb")
-    #endregion getters
+        return station_record.get("sb2a2fadfb")
+
+    # endregion getters
 
     # region mappers
 
     def map_organisation(self, rer_organisation: OrganisationSummary):
         ss_organisation = {
-            "sde6082ea0": rer_organisation.name, # generator/company name
-            "s44395f753": rer_organisation.organisation_id, # organisation id
+            "sde6082ea0": rer_organisation.name,  # generator/company name
+            "s44395f753": rer_organisation.organisation_id,  # organisation id
             "s90b4a920a": rer_organisation.type,
             "sf3acd7357": rer_organisation.status,
         }
         return ss_organisation
 
-    def map_station(self, rer_station: OrganisationStation, certificates: list[CertificatesOverview], update_time: datetime):
+    def map_station(
+        self,
+        rer_station: OrganisationStation,
+        certificates: list[CertificatesOverview],
+        update_time: datetime,
+    ):
         ro_scheme_status = "Not Set"
         rego_scheme_status = "Not Set"
         for scheme in rer_station.scheme_statuses:
@@ -102,16 +127,16 @@ class RERSmartSuiteClient(SmartSuiteClient):
                 rego_scheme_status = scheme.status
 
         for cert in certificates:
-            pass # TODO: add certificate statistics to station mapping
+            pass  # TODO: add certificate statistics to station mapping
         ss_station = {
-            "sb2a2fadfb": rer_station.station_id, # station id
-            "sde6082ea0": rer_station.station_name, # station name
-            "sf6261a94b": ro_scheme_status, # RO scheme status
-            "sxyont8b": rego_scheme_status, # REGO scheme status
-            "secb786709": rer_station.country, #  country
-            "secb786709": rer_station.technology_group , # technology
-            "s9c6cfc3d3": {"date": update_time.isoformat()}, # statistics last updated
-             "sqih0nxo": {"date": update_time.isoformat()}, # oldest regos not issued
+            "sb2a2fadfb": rer_station.station_id,  # station id
+            "sde6082ea0": rer_station.station_name,  # station name
+            "sf6261a94b": ro_scheme_status,  # RO scheme status
+            "sxyont8b": rego_scheme_status,  # REGO scheme status
+            "secb786709": rer_station.country,  #  country
+            "secb786709": rer_station.technology_group,  # technology
+            "s9c6cfc3d3": {"date": update_time.isoformat()},  # statistics last updated
+            "sqih0nxo": {"date": update_time.isoformat()},  # oldest regos not issued
         }
         return ss_station
 
@@ -120,11 +145,11 @@ class RERSmartSuiteClient(SmartSuiteClient):
     # region changes
 
     def update_organisations(self, update_orgs: list[dict]):
-        self.ss.bulk_update_records(table_id=self.table_id_ro_organisations, records=update_orgs)
+        return self.ss.bulk_update_records(
+            table_id=self.table_id_ro_organisations, records=update_orgs
+        )
 
     def create_organisations(self, new_orgs: list[dict]):
-        self.ss.bulk_add_new_records(table_id=self.table_id_ro_organisations, records=new_orgs)
-
-    
-
-
+        return self.ss.bulk_add_new_records(
+            table_id=self.table_id_ro_organisations, records=new_orgs
+        )

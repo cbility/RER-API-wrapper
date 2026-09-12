@@ -8,7 +8,11 @@ from datetime import datetime
 import requests
 
 from rer_api_wrapper import RER_wrapper
-from rer_api_wrapper.models import CertificatesOverview, OrganisationStation, OrganisationSummary
+from rer_api_wrapper.models import (
+    CertificatesOverview,
+    OrganisationStation,
+    OrganisationSummary,
+)
 from rer_scraper.models import (
     RefreshResult,
     ScraperOperations,
@@ -19,12 +23,13 @@ from rer_scraper.models import (
 from rer_scraper.smartsuite import RERSmartSuiteClient
 
 import logging
+
 # logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+
 class RetryInvoker(Protocol):
-    def invoke(self, function_name: str, payload: dict[str, Any]) -> None:
-        ...
+    def invoke(self, function_name: str, payload: dict[str, Any]) -> None: ...
 
 
 class SessionAuthClient:
@@ -67,7 +72,7 @@ class RERScraperService:
         run_start = datetime.now()
         operations = self.smartsuite.get_operations(run_start)
         if len(operations) == 0:
-            return 204, None # successful run but no tasks scheduled
+            return 204, None  # successful run but no tasks scheduled
 
         cookies = self.session_auth.get_cookies()
         if cookies is None:
@@ -96,7 +101,7 @@ class RERScraperService:
         ]
         logger.debug(organisation_stations)
         organisation_certificates = [
-             rer.get_organisation_certificates(organisation.organisation_id)
+            rer.get_organisation_certificates(organisation.organisation_id)
             for organisation in organisations
         ]
         logger.debug(organisation_certificates)
@@ -109,7 +114,9 @@ class RERScraperService:
         transfer: TransferInstruction,
     ) -> TransferPreparationResult:
         source_station = wrapper.get_station(transfer.source_station_id)
-        source_organisation_id = self._find_source_organisation_id(wrapper, transfer.source_station_id)
+        source_organisation_id = self._find_source_organisation_id(
+            wrapper, transfer.source_station_id
+        )
         recipient = wrapper.find_transfer_organisation(
             source_organisation_id,
             transfer.destination_generator_reference,
@@ -147,44 +154,60 @@ class RERScraperService:
             selected=True,
         )
 
-    def update_rer_organisations(self,
-            organisations: list[OrganisationSummary],
-            ):
-            """
-            Updates organisation and station records on SmartSuite with the passed details.
-            Updates records if they already exist, otherwise creates new records.
-            Certificate information is used to create statistics and stores at the station level.
-            """
-    
-            ss_organisations = self.smartsuite.get_current_organisations()
-    
-            # spit records into updates and inserts
-    
-            update_orgs = []
-            insert_orgs = []
-            for org in organisations:
-                ss_org_record = next((ss_org for ss_org in ss_organisations if self.smartsuite.get_organisation_id(ss_org) == org.organisation_id), None)
-                if ss_org_record is not None:
-                    update_orgs.append({
-                        **self.smartsuite.map_organisation(org),
-                        "id": ss_org_record["id"]
-                    })
-                else:
-                    insert_orgs.append(self.smartsuite.map_organisation(org))
-    
-            self.smartsuite.update_organisations(update_orgs)
-            self.smartsuite.create_organisations(insert_orgs)
+    def update_rer_organisations(
+        self,
+        organisations: list[OrganisationSummary],
+    ):
+        """
+        Updates organisation and station records on SmartSuite with the passed details.
+        Updates records if they already exist, otherwise creates new records.
+        Certificate information is used to create statistics and stores at the station level.
+        """
 
-            # map RER fields onto smartsuite fields
+        ss_organisations = self.smartsuite.get_current_organisations()
+
+        # spit records into updates and inserts
+
+        update_orgs = []
+        insert_orgs = []
+        for org in organisations:
+            ss_org_record = next(
+                (
+                    ss_org
+                    for ss_org in ss_organisations
+                    if self.smartsuite.get_organisation_id(ss_org)
+                    == org.organisation_id
+                ),
+                None,
+            )
+            if ss_org_record is not None:
+                update_orgs.append(
+                    {**self.smartsuite.map_organisation(org), "id": ss_org_record["id"]}
+                )
+            else:
+                insert_orgs.append(self.smartsuite.map_organisation(org))
+
+        logger.info(
+            f"Found {len(update_orgs)} orgs to be created and {len(insert_orgs)} to be created"
+        )
+        logger.debug(f"Orgs to update: {update_orgs}")
+        logger.debug(f"Orgs to create: {insert_orgs}")
+
+        self.smartsuite.update_organisations(update_orgs)
+        self.smartsuite.create_organisations(insert_orgs)
+
+        # map RER fields onto smartsuite fields
+
     @staticmethod
     def _find_source_organisation_id(rer: RER_wrapper, station_id: str) -> str:
         for organisation in rer.get_user_organisations():
             stations = rer.get_organisation_stations(organisation.organisation_id)
             if any(station.station_id == station_id for station in stations):
                 return organisation.organisation_id
-        raise ValueError(f"Station {station_id!r} is not available to the authenticated user.")
+        raise ValueError(
+            f"Station {station_id!r} is not available to the authenticated user."
+        )
 
 
 def result_body(result: ScraperResult | None) -> str:
     return json.dumps(asdict(result) if result else {})
-
