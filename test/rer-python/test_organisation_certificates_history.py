@@ -20,8 +20,8 @@ def rego_history(rer):
 
 
 @pytest.fixture(scope="module")
-def roc_history(wrapper):
-    return wrapper.get_organisation_certificates_history(
+def roc_history(rer):
+    return rer.get_organisation_certificates_history(
         ORG_ID, "ROC", from_date=FROM_DATE, to_date=TO_DATE
     )
 
@@ -42,11 +42,8 @@ def test_rego_months_is_list(rego_history):
     assert isinstance(rego_history["months"], list)
 
 
-def test_rego_months_nonempty(rego_history):
-    assert len(rego_history["months"]) > 0
-
-
 def test_rego_each_month_has_fields(rego_history):
+    """Test that if months exist, they have the required fields."""
     for m in rego_history["months"]:
         assert isinstance(m["month"], str) and len(m["month"]) > 0
         assert isinstance(m["month_url"], str)

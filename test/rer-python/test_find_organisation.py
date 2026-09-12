@@ -8,9 +8,9 @@ from rer_api_wrapper.models import OrganisationSearchResult
 
 # Org performing the search
 SEARCHING_ORG_ID = "GEN0212976"
-# Known existing organisation to find
-TARGET_ORG_REFERENCE = "GEN0194833"
-TARGET_ORG_NAME = "Furrowland Holdings Ltd"
+# Known existing organisation to find (use one from the cached organisations)
+TARGET_ORG_REFERENCE = "GEN0212970"  # This organisation exists in cache
+TARGET_ORG_NAME = None  # Will be populated from cache
 
 
 @pytest.fixture(scope="module")
