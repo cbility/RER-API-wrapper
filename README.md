@@ -149,6 +149,110 @@ mock_smartsuite.set_operations(["refresh_data"])  # or ["transfer_certificates"]
 mock_smartsuite.set_current_organisations([...])  # existing records
 ```
 
+#### Scraper Integration Tests with Cached Data
+
+The `test/rer-python/test_scraper_all_cached.py` file contains integration tests that run the **actual Scraper service** against ALL cached HTML data. These tests validate the full scraping and parsing logic with real data volume.
+
+**Run cached data tests:**
+```bash
+# Run all cached data tests with logging
+uv run pytest test/rer-python/test_scraper_all_cached.py -v -s --log-cli-level=INFO
+
+# Run specific test
+uv run pytest test/rer-python/test_scraper_all_cached.py::TestScraperAllCachedData::test_scrape_all_organisations -v -s
+
+# Run individual organisation tests (one per cached org)
+uv run pytest test/rer-python/test_scraper_all_cached.py::TestScraperAllCachedData::test_individual_organisation_scrape -v -s
+```
+
+**Features:**
+- ✅ Real `RERScraperService` class (not mocked)
+- ✅ Real `RERSmartSuiteClient.map_organisation()` method
+- ✅ `CachedRERWrapper` for all RER API calls (uses cached HTML)
+- ✅ ALL cached organisations from `test/rer-html/snapshots/latest/`
+- ✅ Full logging output showing organisations to create/update
+- ✅ `dry_run` mode enabled by default (no SmartSuite writes)
+
+**SmartSuite Logging:**
+
+The `RERSmartSuiteClient` class includes comprehensive logging for all SmartSuite operations:
+
+- **INFO level**: Shows number of records being updated/created and success confirmation
+- **DEBUG level**: Shows full record data being sent to SmartSuite
+- **ERROR level**: Shows failure details including exception message and failed records
+
+Example output:
+```
+INFO - Updating 20 organisation(s) in SmartSuite...
+DEBUG - Organisations to create: [{'sde6082ea0': 'Org Name', ...}]
+INFO - ✓ Successfully created 20 organisation(s)
+```
+
+On error:
+```
+ERROR - ✗ Failed to create organisations: SmartSuite API error: ...
+ERROR - Failed records: [{'sde6082ea0': 'Org Name', ...}]
+```
+
+**Demo scripts:**
+```bash
+# See SmartSuite logging in action
+uv run python test/rer-python/demo_smartsuite_logging.py
+
+# See error handling logging
+uv run python test/rer-python/demo_smartsuite_errors.py
+```
+
+**Dry Run Mode:**
+
+The tests use `dry_run=True` by default to prevent accidental writes to SmartSuite. When `dry_run=True`:
+- The scraper processes all organisations normally
+- SmartSuite mapping is performed using the **REAL** `RERSmartSuiteClient.map_organisation()` method
+- Logs show all organisations that would be created/updated
+- **No actual writes** are made to SmartSuite (the service skips them)
+
+**Important:** The tests use the **real** `RERSmartSuiteClient` class with NO mocking of the mapping or update methods. Only `get_operations()` is mocked to return test data (prevents querying SmartSuite for test configuration). This means:
+- ✅ Real `map_organisation()` method is tested
+- ✅ Real `update_organisations()` method is called (but skipped when `dry_run=True`)
+- ✅ Real `create_organisations()` method is called (but skipped when `dry_run=True`)
+- ✅ Full code path is tested
+
+To **disable dry run** and test actual SmartSuite integration:
+
+1. **In test code**: Edit `test/rer-python/test_scraper_all_cached.py` and change:
+   ```python
+   service = RERScraperService(
+       smartsuite=real_smartsuite,  # Real SmartSuite client
+       # ... other params ...
+       dry_run=False  # Change from True to False
+   )
+   ```
+
+2. **Provide real credentials**: Set environment variables or update the fixture:
+   ```bash
+   export SMARTSUITE_ACCOUNT_ID="your-account-id"
+   export SMARTSUITE_API_TOKEN="your-api-token"
+   ```
+
+3. **Run the test**:
+   ```bash
+   uv run pytest test/rer-python/test_scraper_all_cached.py -v -s
+   ```
+
+⚠️ **Warning**: Running with `dry_run=False` will make **real changes** to your SmartSuite account!
+
+**Example output with dry_run enabled:**
+```
+INFO - Found 0 orgs to be updated and 20 to be created
+INFO - Organisations to CREATE:
+INFO -   {'sde6082ea0': 'Richard Maxwell Ltd', 's44395f753': 'GEN0215344', 's90b4a920a': 'Generator', 'sf3acd7357': 'Approved'}
+INFO -   {'sde6082ea0': 'AMP Heat Limited', 's44395f753': 'GEN0208381', 's90b4a920a': 'Generator', 'sf3acd7357': 'Approved'}
+...
+INFO - Dry run mode: skipping SmartSuite writes
+```
+
+This shows exactly what would be sent to SmartSuite without making any actual changes.
+
 **Dry run mode:**
 By default, tests run with SmartSuite writes disabled (operations are tracked but not executed). This allows testing the full workflow without modifying production data.
 

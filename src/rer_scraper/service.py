@@ -212,7 +212,9 @@ class RERScraperService:
         Certificate information is used to create statistics and stores at the station level.
         """
 
-        ss_organisations = self.smartsuite.get_current_organisations()
+        ss_organisations = (
+            [] if self.dry_run else self.smartsuite.get_current_organisations()
+        )
 
         # spit records into updates and inserts
 

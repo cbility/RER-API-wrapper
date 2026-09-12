@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from smartsuite_python import (
     SmartSuiteClient,
@@ -16,6 +17,8 @@ from rer_api_wrapper.models import (
     OrganisationSummary,
 )
 from rer_scraper.models import ScraperOperations
+
+logger = logging.getLogger(__name__)
 
 
 class RERSmartSuiteClient(SmartSuiteClient):
@@ -52,7 +55,7 @@ class RERSmartSuiteClient(SmartSuiteClient):
     # region getters
 
     def get_operations(self, launch_time: datetime) -> list[ScraperOperations]:
-        """Return pending scraper work once the SmartSuite schema is configured."""
+        """Return pending scraper work."""
         scraper_filter = FilterElement(
             field="s902579400",  # Scraper field
             comparison="is",
@@ -145,11 +148,33 @@ class RERSmartSuiteClient(SmartSuiteClient):
     # region changes
 
     def update_organisations(self, update_orgs: list[dict]):
-        return self.ss.bulk_update_records(
-            table_id=self.table_id_ro_organisations, records=update_orgs
-        )
+        """Update existing organisation records in SmartSuite."""
+        logger.info(f"Updating {len(update_orgs)} organisation(s) in SmartSuite...")
+        logger.debug(f"Organisations to update: {update_orgs}")
+
+        try:
+            result = self.ss.bulk_update_records(
+                table_id=self.table_id_ro_organisations, records=update_orgs
+            )
+            logger.info(f"✓ Successfully updated {len(update_orgs)} organisation(s)")
+            return result
+        except Exception as e:
+            logger.error(f"✗ Failed to update organisations: {e}")
+            logger.error(f"Failed records: {update_orgs}")
+            raise
 
     def create_organisations(self, new_orgs: list[dict]):
-        return self.ss.bulk_add_new_records(
-            table_id=self.table_id_ro_organisations, records=new_orgs
-        )
+        """Create new organisation records in SmartSuite."""
+        logger.info(f"Creating {len(new_orgs)} new organisation(s) in SmartSuite...")
+        logger.debug(f"Organisations to create: {new_orgs}")
+
+        try:
+            result = self.ss.bulk_add_new_records(
+                table_id=self.table_id_ro_organisations, records=new_orgs
+            )
+            logger.info(f"✓ Successfully created {len(new_orgs)} organisation(s)")
+            return result
+        except Exception as e:
+            logger.error(f"✗ Failed to create organisations: {e}")
+            logger.error(f"Failed records: {new_orgs}")
+            raise
