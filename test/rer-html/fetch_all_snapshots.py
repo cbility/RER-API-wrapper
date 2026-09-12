@@ -273,6 +273,28 @@ def main():
             except Exception as e:
                 log.error(f"  ✗ Certificate history: {e}")
 
+            # 8b. Find Organisation endpoint (for certificate transfers)
+            # This endpoint is used to search for a recipient organisation when transferring certificates
+            try:
+                log.info(
+                    "  Fetching FindOrganisation endpoint (certificate transfer)..."
+                )
+                # Use a known organisation reference to test the endpoint
+                test_reference = "GEN0212970"  # Use an organisation we know exists
+                response = wrapper._request(
+                    f"Organisations/{org_id}/Certificates/REGO/FindOrganisation"
+                )
+                # This is a POST endpoint that requires form data, but we can cache the GET response
+                # which shows the form. The actual search happens via POST.
+                save_snapshot(
+                    org_id,
+                    "/certificates/REGO/find-organisation",
+                    response.text,
+                    {"endpoint": "FindOrganisation", "test_reference": test_reference},
+                )
+            except Exception as e:
+                log.error(f"  ✗ FindOrganisation: {e}")
+
             # 9. Individual station details (from stations list)
             try:
                 stations = wrapper.get_organisation_stations(org_id)
