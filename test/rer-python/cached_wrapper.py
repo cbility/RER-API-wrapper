@@ -322,7 +322,14 @@ class CachedRERWrapper:
         endpoint = (
             f"Organisations/{organisation_id}/Certificates/{cert_type}/FindOrganisation"
         )
-        response = self._request(endpoint)
+        try:
+            response = self._request(endpoint)
+        except FileNotFoundError:
+            raise FileNotFoundError(
+                f"Cached response not found for find_transfer_organisation: {endpoint}. "
+                f"Expected at: {self._get_cache_path(endpoint)}. "
+                f"Run 'uv run python test/rer-html/fetch_all_snapshots.py' to update cache."
+            )
         return rer_parsing._parse_find_organisation(response.text)
 
     def select_certificates(
