@@ -107,6 +107,64 @@ uv run python test/rer-python/manage_cache.py clean --older-than 7d
 
 See `test/rer-html/README.md` for more details on HTML snapshots.
 
+### Lambda Handler Integration Tests
+
+#### API Wrapper Handler Tests
+
+The `test/rer-python/test_lambda_handler.py` file contains integration tests for the **API Wrapper Lambda handler** using cached HTML. These tests exercise the full handler workflow without making live requests to the RER portal or writing to SmartSuite.
+
+**Run API Wrapper tests:**
+```bash
+# Run all API Wrapper handler tests
+uv run pytest test/rer-python/test_lambda_handler.py -v
+
+# Run specific test
+uv run pytest test/rer-python/test_lambda_handler.py::test_handler_user_endpoint -v
+```
+
+**What's tested:**
+- Real `handler()` function from `rer_api_wrapper/lambda_handler.py`
+- Real `RERService` and `RERClient` classes
+- Cached HTML responses (no live RER requests)
+- HTTP endpoints: `/user`, `/user/organisations`, `/organisations/{id}`, etc.
+
+#### Scraper Handler Tests
+
+The `test/rer-python/test_scraper_handler.py` file contains integration tests for the **Scraper Lambda handler** with mocked SmartSuite operations. These tests verify the scraper workflow with different SmartSuite configurations.
+
+**Run Scraper tests:**
+```bash
+# Run all Scraper handler tests
+uv run pytest test/rer-python/test_scraper_handler.py -v
+
+# Run specific scenario
+uv run pytest test/rer-python/test_scraper_handler.py::TestScraperHandlerRefreshData -v
+```
+
+**What's tested:**
+- Real `handler()` function from `rer_scraper/handler.py`
+- Real `RERScraperService` class
+- Mocked SmartSuite responses (configurable operations)
+- Cached HTML for RER requests
+- Different scenarios:
+  - No operations (returns 204)
+  - `refresh_data` operation (scrapes RER, updates SmartSuite)
+  - Session refresh pending (returns 202, schedules retry)
+  - Retry event execution
+
+**Mocking SmartSuite operations:**
+```python
+# In test fixture
+mock_smartsuite = MockSmartSuiteClient("test", "test")
+mock_smartsuite.set_operations(["refresh_data"])  # or ["transfer_certificates"]
+mock_smartsuite.set_current_organisations([...])  # existing records
+```
+
+**Dry run mode:**
+By default, tests run with SmartSuite writes disabled (operations are tracked but not executed). This allows testing the full workflow without modifying production data.
+
+See the individual test files for detailed documentation and examples.
+
 ## Wrapped Endpoints
 
 - `GET /User` - User dashboard
