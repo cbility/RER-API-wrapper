@@ -1,8 +1,11 @@
 # RER API Wrapper
 
-Python package for wrapping the Ofgem Renewable Electricity Register (RER) portal. The RER site returns HTML, so this package handles authenticated requests, parses the relevant pages, and returns typed Python objects ready to serialize as JSON from an AWS Lambda/API Gateway wrapper.
+Python package for wrapping the Ofgem Renewable Electricity Register (RER) portal. The RER site returns HTML, so this package handles authenticated requests, parses the relevant pages, and returns typed Python objects.
 
-The repository also includes a separate session-auth Lambda under `session_auth/`. That function manages RER login, MFA, cookie validation, and SmartSuite-backed cookie storage, returning cached cookies for clients to use with the main wrapper Lambda.
+The repository includes:
+- **RERClient**: Core library for interacting with the RER portal (used by the Scraper Lambda)
+- **Session Auth Lambda**: Manages RER login, MFA, cookie validation, and SmartSuite-backed cookie storage
+- **Scraper Lambda**: Scheduled job that syncs RER data to SmartSuite
 
 Deployed API usage is documented in [`docs/session-auth-api.md`](docs/session-auth-api.md).
 Scraper usage is documented in [`docs/scraper-api.md`](docs/scraper-api.md).
@@ -63,19 +66,20 @@ The scraper Lambda requires separate configuration after deployment:
 To use the package you need authenticated RER cookies. The helper script at `test/bootstrap_rer_cookies.py` can regenerate local cookies for development.
 
 
-### Make API Calls
+### Use the RERClient
 
 ```python
-import json
-
-from rer_api_wrapper import RERService
-from rer_api_wrapper.models import to_dict
+from rer_api_wrapper import RERClient
 
 cookies = {"cookie-name": "cookie-value"}
-service = RERService(auth_cookies=cookies)
+client = RERClient(auth_cookies=cookies)
 
-user = service.get_user()
-print(json.dumps(to_dict(user), indent=2))
+user = client.get_user()
+print(f"Logged in as: {user.full_name}")
+
+organisations = client.get_user_organisations()
+for org in organisations:
+    print(f"  - {org.name} ({org.organisation_id})")
 ```
 
 ## Testing
@@ -107,30 +111,36 @@ uv run python test/rer-python/manage_cache.py clean --older-than 7d
 
 See `test/rer-html/README.md` for more details on HTML snapshots.
 
-## Wrapped Endpoints
+## RERClient Methods
 
-- `GET /User` - User dashboard
-- `GET /User/Activity` - User activity log
-- `GET /Organisations/{id}` - Organisation details
-- `GET /Organisations/{id}/Tasks/OutputData` - Output data tasks
+The `RERClient` class provides direct access to RER portal data:
 
-## Example: Get Organisation Tasks
+- `get_user()` - User dashboard
+- `get_user_organisations()` - List of organisations
+- `get_organisation(organisation_id)` - Organisation details
+- `get_organisation_stations(organisation_id)` - Stations list
+- `get_organisation_certificates(organisation_id)` - Certificates overview
+- `get_organisation_output_data_tasks(organisation_id)` - Output data tasks
+- `get_station(station_id)` - Station details
+
+## Example: Get Organisation Data
 
 ```python
-from rer_api_wrapper import RERService
+from rer_api_wrapper import RERClient
 
 cookies = {"cookie-name": "cookie-value"}
-service = RERService(auth_cookies=cookies)
+client = RERClient(auth_cookies=cookies)
 
 org_id = "GEN0215941"
-tasks = service.get_organisation_output_data_tasks(org_id)
+organisations = client.get_user_organisations()
+stations = client.get_organisation_stations(org_id)
+certificates = client.get_organisation_certificates(org_id)
 ```
 
 ## Security
 
 - Store credentials securely (use environment variables)
-- Send an `x-api-key` header when calling the deployed wrapper API
-- Send an `x-api-key` header when calling the separate session-auth API
+- Send an `x-api-key` header when calling the session-auth API
 - Don't commit `rer_cookies.json` to version control
 - Cookies grant full account access - treat like passwords
 - Add `rer_cookies.json` to your `.gitignore`

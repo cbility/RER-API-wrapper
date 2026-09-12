@@ -36,7 +36,7 @@ class TestWrapper:
         """Test that wrapper raises clear error when cache is missing."""
         wrapper = CachedRERWrapper(Path("/nonexistent"))
 
-        with pytest.raises(FileNotFoundError) as exc_info:
+        with pytest.raises(FileNotFoundError) as exc_info:  # type: ignore[call-overload]
             wrapper._request("User")
 
         assert "Cached response not found" in str(exc_info.value)

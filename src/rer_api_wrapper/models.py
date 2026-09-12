@@ -13,7 +13,19 @@ class RERModel:
 
 @dataclass
 class RERRequest(RERModel):
-    """Represents an HTTP request to the RER API."""
+    """Represents an HTTP request to the RER API.
+
+    This model defines the structure of requests made to the RER portal.
+    Used internally by RERClient for making authenticated requests.
+
+    Example:
+        method: "GET"
+        path: "/organisations/GEN0213742"
+        query: {"pageNumber": "1"}
+        body: {}  # For POST requests
+        cookies: {"session": "..."}
+    """
+
     method: str  # HTTP method: "GET", "POST", etc.
     path: str  # API endpoint path, e.g., "/organisations/GEN0213742"
     query: dict[str, Any]  # URL query parameters
@@ -24,7 +36,7 @@ class RERRequest(RERModel):
 @dataclass
 class OrganisationSummary(RERModel):
     """Summary of an organisation from the user dashboard.
-    
+
     Example:
         organisation_id: "GEN0213742"
         name: "GLENSKINNO BIOFUELS LTD"
@@ -33,6 +45,7 @@ class OrganisationSummary(RERModel):
         status: " APPROVED"
         user_status: "Active" (or similar user relationship status)
     """
+
     organisation_id: str  # Unique organisation identifier, e.g., "GEN0213742"
     name: str  # Organisation/company name
     type: str  # Organisation type, e.g., "Generator Commercial", "Generator Domestic"
@@ -44,13 +57,14 @@ class OrganisationSummary(RERModel):
 @dataclass
 class User(RERModel):
     """User dashboard information from /User endpoint.
-    
+
     Example:
         email: "technical@yourenergysource.co.uk"
         full_name: "Toby White"
         outstanding_tasks: 685
         active_organisations: 58
     """
+
     email: str  # User's email address
     full_name: str  # User's full display name
     outstanding_tasks: int  # Total number of tasks requiring attention
@@ -60,11 +74,12 @@ class User(RERModel):
 @dataclass
 class OrganisationAddress(RERModel):
     """Organisation's registered address.
-    
+
     Example:
         name: "GLENSKINNO BIOFUELS LTD"
         address: " 2 Stewart Street Milngavie GLASGOW G62 6BW Scotland "
     """
+
     name: str  # Organisation name at this address
     address: str  # Full postal address including postcode and country
 
@@ -72,11 +87,12 @@ class OrganisationAddress(RERModel):
 @dataclass
 class OrganisationContact(RERModel):
     """Primary contact information for an organisation.
-    
+
     Example:
         name: "Unknown user"
         email: "catherine@asaw.co.uk"
     """
+
     name: str  # Contact person's name (may be "Unknown user" if not set)
     email: str  # Contact email address
 
@@ -84,14 +100,15 @@ class OrganisationContact(RERModel):
 @dataclass
 class OrganisationTab(RERModel):
     """Navigation tab from organisation page.
-    
+
     Example:
         name: "Overview"
         url: "/Organisations/GEN0213742"
-    
-    Available tabs: Overview, Stations, Declarations, Output Data, 
+
+    Available tabs: Overview, Stations, Declarations, Output Data,
     Certificates, Reports, Settings, Activity
     """
+
     name: str  # Tab display name
     url: str  # Relative URL to the tab's page
 
@@ -99,13 +116,14 @@ class OrganisationTab(RERModel):
 @dataclass
 class OrganisationDetail(RERModel):
     """Detailed information about an organisation from /Organisations/{id}.
-    
+
     Example:
         organisation_id: "GEN0213742"
         name: "GLENSKINNO BIOFUELS LTD"
         type: "Generator Commercial"
         status: " APPROVED"
     """
+
     organisation_id: str  # Unique identifier, e.g., "GEN0213742"
     name: str  # Organisation/company name
     type: str  # Organisation type, e.g., "Generator Commercial"
@@ -118,7 +136,7 @@ class OrganisationDetail(RERModel):
 @dataclass
 class OutputDataTask(RERModel):
     """Single output data submission task.
-    
+
     Example:
         task_id: "19e630d6-2383-414a-a384-499aedce47c7"
         period: "Aug 2026"
@@ -126,6 +144,7 @@ class OutputDataTask(RERModel):
         status: "Draft"
         url: "/Organisations/GEN0213742/Output/19e630d6-2383-414a-a384-499aedce47c7/Edit"
     """
+
     task_id: str  # UUID of the task, e.g., "19e630d6-2383-414a-a384-499aedce47c7"
     period: str  # Reporting period in "Mon YYYY" format, e.g., "Aug 2026"
     station_name: str  # Name of the station for this task
@@ -136,11 +155,12 @@ class OutputDataTask(RERModel):
 @dataclass
 class OutputDataTaskList(RERModel):
     """Collection of output data tasks for an organisation.
-    
+
     Example:
         organisation_id: "GEN0213742"
         tasks: [OutputDataTask, ...]
     """
+
     organisation_id: str  # Parent organisation ID
     tasks: list[OutputDataTask]  # List of output data submission tasks
 
@@ -148,13 +168,16 @@ class OutputDataTaskList(RERModel):
 @dataclass
 class StationDeclarationTask(RERModel):
     """Pending station declaration task.
-    
+
     Example:
         declaration_type: "Information (1)"
         year: "2025/2026"
         url: "/Organisations/GEN0213742/AcceptPendingDeclaration/Pending/1/2025-04-01/2026-03-31"
     """
-    declaration_type: str  # Type of declaration, e.g., "Information (1)", "ROS Permitted Ways"
+
+    declaration_type: (
+        str  # Type of declaration, e.g., "Information (1)", "ROS Permitted Ways"
+    )
     year: str  # Reporting year in "YYYY/YYYY" format
     url: str  # Relative URL to complete this declaration
 
@@ -162,6 +185,7 @@ class StationDeclarationTask(RERModel):
 @dataclass
 class StationDeclarationTaskList(RERModel):
     """Collection of station declaration tasks for an organisation."""
+
     organisation_id: str  # Parent organisation ID
     tasks: list[StationDeclarationTask]  # List of pending declaration tasks
 
@@ -169,14 +193,17 @@ class StationDeclarationTaskList(RERModel):
 @dataclass
 class StationDeclaration(RERModel):
     """Station declaration record with status.
-    
+
     Example:
         declaration_type: "Information (1)"
         period: "2025/2026"
         status: "signed"  # or "pending"
         url: "/Organisations/GEN0213742/AcceptPendingDeclaration/Pending/1/2025-04-01/2026-03-31"
     """
-    declaration_type: str  # Type of declaration, e.g., "Information (1)", "ROS Permitted Ways"
+
+    declaration_type: (
+        str  # Type of declaration, e.g., "Information (1)", "ROS Permitted Ways"
+    )
     period: str  # Declaration period in "YYYY/YYYY" format
     status: str  # Declaration status: "pending", "signed", etc.
     url: str  # Relative URL to view/manage this declaration
@@ -185,6 +212,7 @@ class StationDeclaration(RERModel):
 @dataclass
 class StationDeclarationList(RERModel):
     """Collection of station declarations for an organisation."""
+
     organisation_id: str  # Parent organisation ID
     declarations: list[StationDeclaration]  # List of station declarations
 
@@ -192,11 +220,12 @@ class StationDeclarationList(RERModel):
 @dataclass
 class StationSchemeStatus(RERModel):
     """Scheme accreditation status for a station.
-    
+
     Example:
         scheme: "REGO"  # or "RO", "REGORO"
         status: "Approved"
     """
+
     scheme: str  # Scheme name: "RO", "REGO", "REGORO", etc.
     status: str  # Accreditation status, e.g., "Approved", "Pending"
 
@@ -204,7 +233,7 @@ class StationSchemeStatus(RERModel):
 @dataclass
 class OrganisationStation(RERModel):
     """Station summary from organisation stations list.
-    
+
     Example:
         station_id: "469C9786-148B-4FFA-9E4B-0C30B0004AF3"
         station_name: "Glenskinno CHP"
@@ -216,6 +245,7 @@ class OrganisationStation(RERModel):
         last_updated: "08/11/2017"
         url: "/Organisations/Stations/469C9786-148B-4FFA-9E4B-0C30B0004AF3"
     """
+
     station_id: str  # UUID of the station
     station_name: str  # Display name of the station
     organisation_id: str  # Parent organisation ID
@@ -230,7 +260,7 @@ class OrganisationStation(RERModel):
 @dataclass
 class SchemeAccreditation(RERModel):
     """Individual scheme accreditation for a station.
-    
+
     Example:
         scheme: "RO"
         accreditation_reference: "R00028SXSC"
@@ -238,6 +268,7 @@ class SchemeAccreditation(RERModel):
         effective_from: "05/09/2016"
         status: "Approved"
     """
+
     scheme: str  # Scheme name: "RO", "REGO", etc.
     accreditation_reference: str  # Unique reference, e.g., "R00028SXSC", "G01130BWSC"
     application_date: str  # Date application submitted (DD/MM/YYYY)
@@ -248,7 +279,7 @@ class SchemeAccreditation(RERModel):
 @dataclass
 class StationCapacity(RERModel):
     """Station capacity measurement record.
-    
+
     Example:
         capacity_type: "Original"
         commissioning_date: "30/06/2016"
@@ -256,6 +287,7 @@ class StationCapacity(RERModel):
         tic: "49 kW"  # Total Installed Capacity
         dnc: "48.638 kW"  # Declared Net Capacity
     """
+
     capacity_type: str  # Type of capacity record, e.g., "Original", "Updated"
     commissioning_date: str  # Date station was commissioned (DD/MM/YYYY)
     date_added: str  # Date this record was added (DD/MM/YYYY)
@@ -266,7 +298,7 @@ class StationCapacity(RERModel):
 @dataclass
 class StationDetail(RERModel):
     """Complete station details from /Organisations/Stations/{stationId}.
-    
+
     Example:
         station_id: "469C9786-148B-4FFA-9E4B-0C30B0004AF3"
         station_name: "Glenskinno CHP"
@@ -292,6 +324,7 @@ class StationDetail(RERModel):
         rego_accredited: "Yes"
         output_submission_frequency: "Monthly"
     """
+
     station_id: str  # UUID of the station
     station_name: str  # Display name of the station
     organisation_name: str  # Parent organisation name
@@ -322,11 +355,12 @@ class StationDetail(RERModel):
 @dataclass
 class OrganisationSearchResult(RERModel):
     """Result from organisation search by reference.
-    
+
     Example:
         reference: "GEN0213742"
         name: "GLENSKINNO BIOFUELS LTD"
     """
+
     reference: str  # Organisation reference/ID
     name: str  # Organisation name
 
@@ -334,7 +368,7 @@ class OrganisationSearchResult(RERModel):
 @dataclass
 class CertificateTypeSummary(RERModel):
     """Summary of certificates by type for an organisation.
-    
+
     Example:
         cert_type: "REGO"  # or "ROC"
         issued: 0
@@ -342,6 +376,7 @@ class CertificateTypeSummary(RERModel):
         breakdown_url: "/Organisations/GEN0213742/Certificates/REGO/Breakdown"
         history_url: "/Organisations/GEN0213742/Certificates/REGO/History"
     """
+
     cert_type: str  # Certificate type: "ROC", "REGO"
     issued: int  # Number of certificates issued
     balance: int | None  # Current balance (may be None for some types)
@@ -352,12 +387,13 @@ class CertificateTypeSummary(RERModel):
 @dataclass
 class CertificatesOverview(RERModel):
     """Overview of all certificates for an organisation.
-    
+
     Example:
         organisation_id: "GEN0213742"
         balance_period: "Balance of issued certificates from 2025 to 2027"
         summaries: [CertificateTypeSummary(...), ...]
     """
+
     organisation_id: str  # Parent organisation ID
     balance_period: str  # Description of the balance period
     summaries: list[CertificateTypeSummary]  # Summary for each certificate type
@@ -366,7 +402,7 @@ class CertificatesOverview(RERModel):
 @dataclass
 class CertificateBreakdownItem(RERModel):
     """Individual certificate entry in a breakdown view.
-    
+
     Example:
         action: "Issued"  # or "Transferred"
         country: "Scotland"
@@ -375,6 +411,7 @@ class CertificateBreakdownItem(RERModel):
         output_period: "Aug 2025"
         count: 10
     """
+
     action: str  # Certificate action: "Issued", "Transferred", etc.
     country: str  # Country where generated
     station: str  # Station name
@@ -386,12 +423,13 @@ class CertificateBreakdownItem(RERModel):
 @dataclass
 class CertificateBreakdown(RERModel):
     """Detailed breakdown of certificates by period/station.
-    
+
     Example:
         organisation_id: "GEN0213742"
         cert_type: "REGO"
         items: [CertificateBreakdownItem(...), ...]
     """
+
     organisation_id: str  # Parent organisation ID
     cert_type: str  # Certificate type: "ROC", "REGO"
     items: list[CertificateBreakdownItem]  # Individual certificate records
@@ -400,13 +438,14 @@ class CertificateBreakdown(RERModel):
 @dataclass
 class CertificateHistoryMonth(RERModel):
     """Monthly certificate transfer history.
-    
+
     Example:
         month: "Aug 2025"
         month_url: "/Organisations/GEN0213742/Certificates/REGO/History/2025-08"
         transferred_in: 50
         transferred_out: 30
     """
+
     month: str  # Month in "Mon YYYY" format
     month_url: str  # URL to view detailed history for this month
     transferred_in: int  # Certificates transferred into organisation
@@ -416,12 +455,13 @@ class CertificateHistoryMonth(RERModel):
 @dataclass
 class CertificateHistory(RERModel):
     """Certificate transfer history for an organisation.
-    
+
     Example:
         organisation_id: "GEN0213742"
         cert_type: "REGO"
         months: [CertificateHistoryMonth(...), ...]
     """
+
     organisation_id: str  # Parent organisation ID
     cert_type: str  # Certificate type: "ROC", "REGO"
     months: list[CertificateHistoryMonth]  # Monthly history records

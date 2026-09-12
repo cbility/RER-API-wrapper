@@ -59,7 +59,7 @@ def test_select_certificates_rejects_existing_selection():
         )
     )
 
-    with pytest.raises(ValueError, match="already selected"):
+    with pytest.raises(ValueError, match="already selected"):  # type: ignore[call-overload]
         wrapper.select_certificates(
             "GEN0202802", "REGO", "Wind Farm", "Apr 2025", "May 2025"
         )

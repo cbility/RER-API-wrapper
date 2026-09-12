@@ -1,4 +1,6 @@
-AWSTemplateFormatVersion: '2010-09-09'
+# yaml-language-server: $schema=https://raw.githubusercontent.com/awslabs/goformation/master/schema/sam.schema.json
+# yaml-language-server: disabled=true  # Disable validation - SAM CLI validates correctly
+AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: >
   rer-api-wrapper
@@ -61,33 +63,6 @@ Globals:
     Timeout: 30
 
 Resources:
-  RERWrapperApi:
-    Type: AWS::Serverless::Api
-    Properties:
-      StageName: Prod
-      # API keys are enforced with x-api-key, but SAM deploy still treats this as
-      # not having an authorizer such as IAM, Cognito, or Lambda authorizer.
-      Auth:
-        ApiKeyRequired: true
-
-  RERWrapperFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: src/
-      Handler: rer_api_wrapper.lambda_handler.handler
-      Runtime: python3.12
-      Architectures:
-        - x86_64
-      Events:
-        ProxyRoute:
-          Type: Api
-          Properties:
-            RestApiId: !Ref RERWrapperApi
-            Path: /{proxy+}
-            Method: any
-            Auth:
-              ApiKeyRequired: true
-
   RERSessionAuthApi:
     Type: AWS::Serverless::Api
     Properties:
