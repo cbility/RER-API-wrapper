@@ -1,5 +1,4 @@
-from __future__ import annotations
-
+# region imports
 import json
 from dataclasses import asdict
 from typing import Any, Callable, Protocol
@@ -24,15 +23,47 @@ from rer_scraper.smartsuite import RERSmartSuiteClient
 
 import logging
 
-# logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# endregion imports
+
+# region configuration
 logger = logging.getLogger(__name__)
 
 
 class RetryInvoker(Protocol):
-    def invoke(self, function_name: str, payload: dict[str, Any]) -> None: ...
+    """
+    Protocol defining a contract for triggering retry executions of the scraper Lambda function.
+    
+    This is used when the session-auth API returns a 202 Accepted response, indicating that
+    cookies are not yet ready. The RetryInvoker schedules an asynchronous retry of the scraper
+    without blocking the current execution.
+    
+    The Protocol pattern allows dependency injection, enabling different implementations
+    for production (Boto3RetryInvoker in handler.py) and testing (StubRetryInvoker in tests).
+    """
+
+    def invoke(
+        self, function_name: str, payload: dict[str, Any]
+    ) -> None:
+        """
+        Invoke a retry of the scraper function.
+        
+        Args:
+            function_name: The name of the Lambda function to invoke.
+            payload: The payload to pass to the function, typically including retry flags.
+        """
+        ...  # implemented in lambda handler
 
 
 class SessionAuthClient:
+    """
+    Client for retrieving RER session cookies from the session-auth API.
+    
+    This client communicates with the session-auth Lambda service to obtain
+    authenticated cookies for accessing the RER portal. When cookies are not
+    yet ready (e.g., during OAuth flow), the API returns a 202 Accepted status,
+    and this client returns None to signal that a retry should be scheduled.
+    """
+
     def __init__(self, api_url: str, api_key: str, timeout: int = 30):
         self.api_url = api_url.rstrip("/")
         self.api_key = api_key
@@ -54,6 +85,23 @@ class SessionAuthClient:
 
 
 class RERScraperService:
+    """
+    Main service orchestrating RER data scraping and SmartSuite synchronization.
+    
+    This service coordinates the following operations:
+    - Retrieving session cookies via the SessionAuthClient
+    - Fetching current data from RER (organisations, stations, certificates)
+    - Updating SmartSuite records with the latest RER data
+    - Preparing certificate transfers between organisations
+    - Scheduling retries when session authentication is pending
+    
+    The service uses dependency injection for flexibility and testability:
+    - RERSmartSuiteClient for SmartSuite API interactions
+    - SessionAuthClient for RER session management
+    - RetryInvoker for scheduling retry executions
+    - wrapper_factory for creating RER API wrapper instances
+    """
+
     def __init__(
         self,
         smartsuite: RERSmartSuiteClient,
