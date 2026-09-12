@@ -39,5 +39,9 @@ dev = [
 python_version = "3.12"
 mypy_path = ["src", "session_auth"]
 
+[tool.pyright]
+pythonVersion = "3.12"
+extraPaths = ["src", "session_auth"]
+
 [tool.uv.sources]
 smartsuite-python = { git = "https://github.com/cbility/smartsuite-python.git" }
