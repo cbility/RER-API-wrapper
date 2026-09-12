@@ -13,7 +13,6 @@ from typing import NotRequired, TypedDict
 
 import requests
 
-
 log = logging.getLogger(__name__)
 
 RER_BASE_URL = "https://rer.ofgem.gov.uk/"
@@ -115,7 +114,9 @@ def are_cookies_valid(cookies: dict[str, str], timeout: int = 30) -> bool:
         return False
 
     try:
-        response = build_session(cookies).get(RER_USER_URL, timeout=timeout, allow_redirects=False)
+        response = build_session(cookies).get(
+            RER_USER_URL, timeout=timeout, allow_redirects=False
+        )
     except requests.RequestException:
         log.exception("Failed to validate cached RER cookies")
         return False
@@ -128,8 +129,8 @@ def are_cookies_valid(cookies: dict[str, str], timeout: int = 30) -> bool:
         return False
 
     sign_in_markers = (
-        "id=\"signInName\"",
-        "name=\"signInName\"",
+        'id="signInName"',
+        'name="signInName"',
         "b2c_1a_rer_signin",
         "/Account/SignIn",
     )
@@ -166,7 +167,9 @@ def _load_gmail_credentials(token_json: str | None, token_file: str | None):
 
     if token_json:
         info = json.loads(token_json)
-        credentials = Credentials.from_authorized_user_info(info, ["https://mail.google.com/"])
+        credentials = Credentials.from_authorized_user_info(
+            info, ["https://mail.google.com/"]
+        )
         if credentials.expired and credentials.refresh_token:
             credentials.refresh(Request())
         return credentials
@@ -180,7 +183,9 @@ def _load_gmail_credentials(token_json: str | None, token_file: str | None):
     if not token_path.exists():
         raise FileNotFoundError(get_no_token_error_message(token_path))
 
-    credentials = Credentials.from_authorized_user_file(token_path, ["https://mail.google.com/"])
+    credentials = Credentials.from_authorized_user_file(
+        token_path, ["https://mail.google.com/"]
+    )
     if credentials.expired and credentials.refresh_token:
         credentials.refresh(Request())
         token_path.write_text(credentials.to_json(), encoding="utf-8")
@@ -198,12 +203,22 @@ def get_gmail_messages(
     credentials = _load_gmail_credentials(token_json=token_json, token_file=token_file)
     service = build("gmail", "v1", credentials=credentials)
     query = f'after:{since_date.strftime("%Y/%m/%d")}'
-    results = service.users().messages().list(userId="me", q=query, maxResults=max_messages).execute()
+    results = (
+        service.users()
+        .messages()
+        .list(userId="me", q=query, maxResults=max_messages)
+        .execute()
+    )
     message_refs = results.get("messages", [])
 
     messages: list[GmailMessage] = []
     for message_ref in message_refs:
-        message = service.users().messages().get(userId="me", id=message_ref["id"], format="full").execute()
+        message = (
+            service.users()
+            .messages()
+            .get(userId="me", id=message_ref["id"], format="full")
+            .execute()
+        )
         messages.append(message)
     return messages
 
@@ -228,7 +243,9 @@ def retrieve_mfa_code(
     wait_between_retries: int,
 ) -> str:
     for retry_number in range(max_retries):
-        log.info("Attempting to retrieve MFA code (%s/%s)", retry_number + 1, max_retries)
+        log.info(
+            "Attempting to retrieve MFA code (%s/%s)", retry_number + 1, max_retries
+        )
         messages_today = get_gmail_messages(
             since_date=button_clicked_after.date(),
             max_messages=10,
@@ -238,7 +255,8 @@ def retrieve_mfa_code(
         messages_after_click = [
             message
             for message in messages_today
-            if dt.datetime.fromtimestamp(int(message.get("internalDate", 0)) / 1000) > button_clicked_after
+            if dt.datetime.fromtimestamp(int(message.get("internalDate", 0)) / 1000)
+            > button_clicked_after
         ]
 
         for message in messages_after_click:
@@ -250,7 +268,9 @@ def retrieve_mfa_code(
             if match:
                 return match.group(1)
 
-        log.warning("MFA email not found. Retrying in %s seconds.", wait_between_retries)
+        log.warning(
+            "MFA email not found. Retrying in %s seconds.", wait_between_retries
+        )
         sleep(wait_between_retries)
 
     raise TimeoutError(f"Failed to retrieve MFA code after {max_retries} attempts.")
@@ -287,9 +307,13 @@ def browser_authenticate_rer(config: RERAuthConfig) -> dict[str, str]:
             page.click("button:has-text('Sign in')")
             page.wait_for_load_state("networkidle")
 
-            login_error_message = page.query_selector("#localAccountForm > div.error.pageLevel > p")
+            login_error_message = page.query_selector(
+                "#localAccountForm > div.error.pageLevel > p"
+            )
             if login_error_message:
-                raise ValueError(f"Authentication failed: {login_error_message.inner_text()}")
+                raise ValueError(
+                    f"Authentication failed: {login_error_message.inner_text()}"
+                )
 
             button_clicked_after = dt.datetime.now()
             page.click("#sendCode")
@@ -316,6 +340,8 @@ def browser_authenticate_rer(config: RERAuthConfig) -> dict[str, str]:
 
             page.wait_for_url("https://rer.ofgem.gov.uk/**", timeout=300000)
             cookies = page.context.cookies()
-            return sanitize_cookies({cookie["name"]: cookie["value"] for cookie in cookies})
+            return sanitize_cookies(
+                {cookie.get("name", ""): cookie.get("value", "") for cookie in cookies}
+            )
         finally:
             browser.close()
