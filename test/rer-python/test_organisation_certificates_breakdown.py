@@ -1,33 +1,20 @@
 """Tests for RER_wrapper.get_organisation_certificates_breakdown() - GET /Organisations/{id}/Certificates/{type}/Breakdown"""
-import os
-import json
+
 from dataclasses import asdict
 import pytest
 
-from rer_api_wrapper import RER_wrapper
 from rer_api_wrapper.models import CertificateBreakdown
 
-
-COOKIES_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'rer_cookies.json')
 ORG_ID = "GEN0202802"
 
 
+@pytest.fixture(scope="module")
+def rego_breakdown(rer):
+    return rer.get_organisation_certificates_breakdown(ORG_ID, "REGO")
 
 
 @pytest.fixture(scope="module")
-def wrapper():
-    with open(COOKIES_FILE) as f:
-        cookies = json.load(f)
-    return RER_wrapper(auth_cookies=cookies)
-
-
-@pytest.fixture(scope="module")
-def rego_breakdown(wrapper):
-    return wrapper.get_organisation_certificates_breakdown(ORG_ID, "REGO")
-
-
-@pytest.fixture(scope="module")
-def roc_breakdown(wrapper):
+def roc_breakdown(rer):
     return wrapper.get_organisation_certificates_breakdown(ORG_ID, "ROC")
 
 

@@ -1,26 +1,15 @@
 """Tests for RER_wrapper.get_user() - GET /User"""
-import os
+
 import json
 from dataclasses import asdict
 import pytest
 
-from rer_api_wrapper import RER_wrapper
 from rer_api_wrapper.models import User
 
 
-COOKIES_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'rer_cookies.json')
-
-
 @pytest.fixture(scope="module")
-def wrapper():
-    with open(COOKIES_FILE) as f:
-        cookies = json.load(f)
-    return RER_wrapper(auth_cookies=cookies)
-
-
-@pytest.fixture(scope="module")
-def user(wrapper):
-    return wrapper.get_user()
+def user(rer):
+    return rer.get_user()
 
 
 def test_returns_user_type(user):
@@ -44,6 +33,7 @@ def test_full_name_is_string_and_nonempty(user):
 def test_outstanding_tasks_is_non_negative_int(user):
     assert isinstance(user.outstanding_tasks, int)
     assert user.outstanding_tasks >= 0
+
 
 def test_print_raw(user):
     print(json.dumps(user, default=asdict, indent=2))

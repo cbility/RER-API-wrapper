@@ -1,23 +1,27 @@
-"""Shared setup for live RER integration tests."""
-import json
-import os
+"""Shared setup for RER integration tests using cached HTML fixtures.
+
+All tests use cached HTML responses from disk. To update the cache, run:
+    uv run python test/rer-html/fetch_all_snapshots.py
+"""
+
+import sys
+from pathlib import Path
 
 import pytest
-import requests
 
-from rer_api_wrapper import RER_wrapper
-
-
-COOKIES_FILE = os.path.join(os.path.dirname(__file__), "..", "..", "rer_cookies.json")
+# Add test directory to path for cached_wrapper import
+sys.path.insert(0, str(Path(__file__).parent))
+from cached_wrapper import CachedRERWrapper, FIXTURES_DIR
 
 
-@pytest.fixture(scope="session", autouse=True)
-def require_valid_rer_cookies():
-    try:
-        with open(COOKIES_FILE) as f:
-            cookies = json.load(f)
-        RER_wrapper(auth_cookies=cookies)
-    except FileNotFoundError:
-        pytest.skip(f"RER cookie file not found: {COOKIES_FILE}", allow_module_level=True)
-    except (ValueError, requests.exceptions.RequestException) as exc:
-        pytest.skip(f"RER cookies are unavailable or invalid: {exc}", allow_module_level=True)
+@pytest.fixture(scope="module")
+def rer():
+    """RER wrapper that serves cached HTML responses from disk.
+
+    Uses cached HTML snapshots from test/rer-html/snapshots/latest/.
+    Fails with FileNotFoundError if a cached response is not found.
+
+    To update cache fixtures:
+        uv run python test/rer-html/fetch_all_snapshots.py
+    """
+    return CachedRERWrapper(cache_dir=FIXTURES_DIR)

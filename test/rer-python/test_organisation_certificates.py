@@ -1,14 +1,10 @@
 """Tests for RER_wrapper.get_organisation_certificates() - GET /Organisations/{id}/Certificates"""
-import os
-import json
+
 from dataclasses import asdict
 import pytest
 
-from rer_api_wrapper import RER_wrapper
 from rer_api_wrapper.models import CertificatesOverview
 
-
-COOKIES_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'rer_cookies.json')
 ORG_ID = "GEN0202802"
 
 
@@ -17,15 +13,8 @@ def pytest_configure(config):
 
 
 @pytest.fixture(scope="module")
-def wrapper():
-    with open(COOKIES_FILE) as f:
-        cookies = json.load(f)
-    return RER_wrapper(auth_cookies=cookies)
-
-
-@pytest.fixture(scope="module")
-def overview(wrapper):
-    return wrapper.get_organisation_certificates(ORG_ID)
+def overview(rer):
+    return rer.get_organisation_certificates(ORG_ID)
 
 
 def test_returns_dict(overview):

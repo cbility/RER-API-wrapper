@@ -1,33 +1,23 @@
 """Tests for RER_wrapper.get_organisation_output_data() - GET /Organisations/{id}/Tasks/OutputData"""
-import os
-import json
+
 from dataclasses import asdict
 import pytest
 import re
 
-from rer_api_wrapper import RER_wrapper
 from rer_api_wrapper.models import OutputDataTaskList
 
-
-COOKIES_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'rer_cookies.json')
-
-UUID_RE = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', re.I)
-
-
-@pytest.fixture(scope="module")
-def wrapper():
-    with open(COOKIES_FILE) as f:
-        cookies = json.load(f)
-    return RER_wrapper(auth_cookies=cookies)
+UUID_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.I
+)
 
 
 @pytest.fixture(scope="module")
-def first_org_id(wrapper):
-    return wrapper.get_user_organisations()[0].organisation_id
+def first_org_id(rer):
+    return rer.get_user_organisations()[0].organisation_id
 
 
 @pytest.fixture(scope="module")
-def output_data(wrapper, first_org_id):
+def output_data(rer, first_org_id):
     return wrapper.get_organisation_output_data_tasks(first_org_id)
 
 

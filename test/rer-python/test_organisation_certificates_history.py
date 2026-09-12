@@ -1,36 +1,28 @@
 """Tests for RER_wrapper.get_organisation_certificates_history() - GET /Organisations/{id}/Certificates/{type}/History"""
-import os
-import json
+
 from dataclasses import asdict
 import pytest
 
 
-from rer_api_wrapper import RER_wrapper
 from rer_api_wrapper.models import CertificateHistory
 
-
-COOKIES_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'rer_cookies.json')
 ORG_ID = "GEN0202802"
 FROM_DATE = "05/01/2024 00:00:00 +01:00"
 TO_DATE = "04/07/2026 12:14:27 +01:00"
 
 
-
 @pytest.fixture(scope="module")
-def wrapper():
-    with open(COOKIES_FILE) as f:
-        cookies = json.load(f)
-    return RER_wrapper(auth_cookies=cookies)
-
-
-@pytest.fixture(scope="module")
-def rego_history(wrapper):
-    return wrapper.get_organisation_certificates_history(ORG_ID, "REGO", from_date=FROM_DATE, to_date=TO_DATE)
+def rego_history(rer):
+    return rer.get_organisation_certificates_history(
+        ORG_ID, "REGO", from_date=FROM_DATE, to_date=TO_DATE
+    )
 
 
 @pytest.fixture(scope="module")
 def roc_history(wrapper):
-    return wrapper.get_organisation_certificates_history(ORG_ID, "ROC", from_date=FROM_DATE, to_date=TO_DATE)
+    return wrapper.get_organisation_certificates_history(
+        ORG_ID, "ROC", from_date=FROM_DATE, to_date=TO_DATE
+    )
 
 
 def test_rego_returns_dict(rego_history):

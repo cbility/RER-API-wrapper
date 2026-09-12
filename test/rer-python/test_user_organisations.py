@@ -1,25 +1,12 @@
 """Tests for RER_wrapper.get_user_organisations() - GET /User (all pages)"""
-import os
-import json
+
 from dataclasses import asdict
 import pytest
 
-from rer_api_wrapper import RER_wrapper
-
-
-COOKIES_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'rer_cookies.json')
-
 
 @pytest.fixture(scope="module")
-def wrapper():
-    with open(COOKIES_FILE) as f:
-        cookies = json.load(f)
-    return RER_wrapper(auth_cookies=cookies)
-
-
-@pytest.fixture(scope="module")
-def organisations(wrapper):
-    return wrapper.get_user_organisations()
+def organisations(rer):
+    return rer.get_user_organisations()
 
 
 def test_returns_list(organisations):

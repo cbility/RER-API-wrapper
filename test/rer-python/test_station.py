@@ -1,28 +1,16 @@
 """Tests for RER_wrapper.get_station() - GET /Organisations/Stations/{stationId}"""
-import os
-import json
+
 from dataclasses import asdict
 import pytest
 
-from rer_api_wrapper import RER_wrapper
 from rer_api_wrapper.models import StationDetail
-
-
-COOKIES_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'rer_cookies.json')
 
 STATION_ID = "075B874C-0558-4C39-835B-69B6C84F4595"
 
 
 @pytest.fixture(scope="module")
-def wrapper():
-    with open(COOKIES_FILE) as f:
-        cookies = json.load(f)
-    return RER_wrapper(auth_cookies=cookies)
-
-
-@pytest.fixture(scope="module")
-def station(wrapper):
-    return wrapper.get_station(STATION_ID)
+def station(rer):
+    return rer.get_station(STATION_ID)
 
 
 def test_returns_dict(station):
@@ -38,7 +26,10 @@ def test_station_name_nonempty(station):
 
 
 def test_organisation_name_nonempty(station):
-    assert isinstance(station["organisation_name"], str) and len(station["organisation_name"]) > 0
+    assert (
+        isinstance(station["organisation_name"], str)
+        and len(station["organisation_name"]) > 0
+    )
 
 
 def test_country_nonempty(station):
@@ -46,15 +37,24 @@ def test_country_nonempty(station):
 
 
 def test_commissioning_date_nonempty(station):
-    assert isinstance(station["commissioning_date"], str) and len(station["commissioning_date"]) > 0
+    assert (
+        isinstance(station["commissioning_date"], str)
+        and len(station["commissioning_date"]) > 0
+    )
 
 
 def test_total_installed_capacity_nonempty(station):
-    assert isinstance(station["total_installed_capacity"], str) and len(station["total_installed_capacity"]) > 0
+    assert (
+        isinstance(station["total_installed_capacity"], str)
+        and len(station["total_installed_capacity"]) > 0
+    )
 
 
 def test_technology_group_nonempty(station):
-    assert isinstance(station["technology_group"], str) and len(station["technology_group"]) > 0
+    assert (
+        isinstance(station["technology_group"], str)
+        and len(station["technology_group"]) > 0
+    )
 
 
 def test_address_nonempty(station):
@@ -72,8 +72,14 @@ def test_scheme_accreditations_nonempty(station):
 def test_each_accreditation_has_required_fields(station):
     for acc in station["scheme_accreditations"]:
         assert isinstance(acc["scheme"], str) and len(acc["scheme"]) > 0
-        assert isinstance(acc["accreditation_reference"], str) and len(acc["accreditation_reference"]) > 0
-        assert isinstance(acc["application_date"], str) and len(acc["application_date"]) > 0
+        assert (
+            isinstance(acc["accreditation_reference"], str)
+            and len(acc["accreditation_reference"]) > 0
+        )
+        assert (
+            isinstance(acc["application_date"], str)
+            and len(acc["application_date"]) > 0
+        )
         assert isinstance(acc["effective_from"], str) and len(acc["effective_from"]) > 0
         assert isinstance(acc["status"], str) and len(acc["status"]) > 0
 
@@ -89,7 +95,10 @@ def test_station_capacities_nonempty(station):
 def test_each_capacity_has_required_fields(station):
     for cap in station["station_capacities"]:
         assert isinstance(cap["capacity_type"], str) and len(cap["capacity_type"]) > 0
-        assert isinstance(cap["commissioning_date"], str) and len(cap["commissioning_date"]) > 0
+        assert (
+            isinstance(cap["commissioning_date"], str)
+            and len(cap["commissioning_date"]) > 0
+        )
         assert isinstance(cap["tic"], str) and len(cap["tic"]) > 0
         assert isinstance(cap["dnc"], str) and len(cap["dnc"]) > 0
 

@@ -78,6 +78,35 @@ user = service.get_user()
 print(json.dumps(to_dict(user), indent=2))
 ```
 
+## Testing
+
+The test suite uses cached HTML responses stored in `test/rer-html/snapshots/latest/`. This allows tests to run offline without depending on the RER portal being available.
+
+**Run tests:**
+```bash
+uv run pytest test/rer-python/ -v
+```
+
+**Update cache fixtures:**
+```bash
+# Fetch fresh HTML from RER portal (requires valid cookies)
+uv run python test/rer-html/fetch_all_snapshots.py
+
+# Set as latest cache
+uv run python test/rer-python/manage_cache.py latest
+```
+
+**Cache management:**
+```bash
+# Check cache status
+uv run python test/rer-python/manage_cache.py status
+
+# Clean old snapshots (older than 7 days)
+uv run python test/rer-python/manage_cache.py clean --older-than 7d
+```
+
+See `test/rer-html/README.md` for more details on HTML snapshots.
+
 ## Wrapped Endpoints
 
 - `GET /User` - User dashboard

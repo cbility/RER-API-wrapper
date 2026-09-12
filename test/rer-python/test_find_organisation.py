@@ -1,14 +1,8 @@
 """Tests for RER_wrapper.find_organisation() - POST /Organisations/{id}/Certificates/{certType}/FindOrganisation"""
-import os
-import json
-from dataclasses import asdict
+
 import pytest
 
-from rer_api_wrapper import RER_wrapper
 from rer_api_wrapper.models import OrganisationSearchResult
-
-
-COOKIES_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'rer_cookies.json')
 
 # Org performing the search
 SEARCHING_ORG_ID = "GEN0212976"
@@ -18,20 +12,13 @@ TARGET_ORG_NAME = "Furrowland Holdings Ltd"
 
 
 @pytest.fixture(scope="module")
-def wrapper():
-    with open(COOKIES_FILE) as f:
-        cookies = json.load(f)
-    return RER_wrapper(auth_cookies=cookies)
+def hit(rer):
+    return rer.find_organisation(SEARCHING_ORG_ID, TARGET_ORG_REFERENCE)
 
 
 @pytest.fixture(scope="module")
-def hit(wrapper):
-    return wrapper.find_organisation(SEARCHING_ORG_ID, TARGET_ORG_REFERENCE)
-
-
-@pytest.fixture(scope="module")
-def miss(wrapper):
-    return wrapper.find_organisation(SEARCHING_ORG_ID, "GEN9999999")
+def miss(rer):
+    return rer.find_organisation(SEARCHING_ORG_ID, "GEN9999999")
 
 
 def test_hit_returns_dict(hit):
