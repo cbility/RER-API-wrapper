@@ -31,7 +31,7 @@ class Boto3RetryInvoker:
         )
 
 
-def build_service() -> RERScraperService:
+def build_service(dry_run: bool = False) -> RERScraperService:
     function_name = os.getenv("AWS_LAMBDA_FUNCTION_NAME")
     auth_api_url = os.getenv("RER_SESSION_AUTH_API_URL")
     auth_api_key = os.getenv("RER_SESSION_AUTH_API_KEY_VALUE")
@@ -58,6 +58,7 @@ def build_service() -> RERScraperService:
         session_auth=SessionAuthClient(auth_api_url, auth_api_key),
         retry_invoker=Boto3RetryInvoker(),
         function_name=function_name,
+        dry_run=dry_run,
     )
 
 

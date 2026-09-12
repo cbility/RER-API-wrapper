@@ -32,21 +32,19 @@ logger = logging.getLogger(__name__)
 class RetryInvoker(Protocol):
     """
     Protocol defining a contract for triggering retry executions of the scraper Lambda function.
-    
+
     This is used when the session-auth API returns a 202 Accepted response, indicating that
     cookies are not yet ready. The RetryInvoker schedules an asynchronous retry of the scraper
     without blocking the current execution.
-    
+
     The Protocol pattern allows dependency injection, enabling different implementations
     for production (Boto3RetryInvoker in handler.py) and testing (StubRetryInvoker in tests).
     """
 
-    def invoke(
-        self, function_name: str, payload: dict[str, Any]
-    ) -> None:
+    def invoke(self, function_name: str, payload: dict[str, Any]) -> None:
         """
         Invoke a retry of the scraper function.
-        
+
         Args:
             function_name: The name of the Lambda function to invoke.
             payload: The payload to pass to the function, typically including retry flags.
@@ -57,7 +55,7 @@ class RetryInvoker(Protocol):
 class SessionAuthClient:
     """
     Client for retrieving RER session cookies from the session-auth API.
-    
+
     This client communicates with the session-auth Lambda service to obtain
     authenticated cookies for accessing the RER portal. When cookies are not
     yet ready (e.g., during OAuth flow), the API returns a 202 Accepted status,
@@ -87,14 +85,14 @@ class SessionAuthClient:
 class RERScraperService:
     """
     Main service orchestrating RER data scraping and SmartSuite synchronization.
-    
+
     This service coordinates the following operations:
     - Retrieving session cookies via the SessionAuthClient
     - Fetching current data from RER (organisations, stations, certificates)
     - Updating SmartSuite records with the latest RER data
     - Preparing certificate transfers between organisations
     - Scheduling retries when session authentication is pending
-    
+
     The service uses dependency injection for flexibility and testability:
     - RERSmartSuiteClient for SmartSuite API interactions
     - SessionAuthClient for RER session management
@@ -109,12 +107,14 @@ class RERScraperService:
         retry_invoker: RetryInvoker,
         function_name: str,
         wrapper_factory: Callable[[dict[str, str]], RERClient] = RERClient,
+        dry_run: bool = False,
     ):
         self.smartsuite = smartsuite
         self.session_auth = session_auth
         self.retry_invoker = retry_invoker
         self.function_name = function_name
         self.wrapper_factory = wrapper_factory
+        self.dry_run = dry_run
 
     def run(self, schedule_retry: bool = True) -> tuple[int, ScraperResult | None]:
         run_start = datetime.now()
@@ -238,11 +238,22 @@ class RERScraperService:
         logger.info(
             f"Found {len(update_orgs)} orgs to be updated and {len(insert_orgs)} to be created"
         )
-        logger.debug(f"Orgs to update: {update_orgs}")
-        logger.debug(f"Orgs to create: {insert_orgs}")
 
-        self.smartsuite.update_organisations(update_orgs)
-        self.smartsuite.create_organisations(insert_orgs)
+        if update_orgs:
+            logger.info("Organisations to UPDATE:")
+            for org in update_orgs:
+                logger.info(f"  {org}")
+
+        if insert_orgs:
+            logger.info("Organisations to CREATE:")
+            for org in insert_orgs:
+                logger.info(f"  {org}")
+
+        if not self.dry_run:
+            self.smartsuite.update_organisations(update_orgs)
+            self.smartsuite.create_organisations(insert_orgs)
+        else:
+            logger.info("Dry run mode: skipping SmartSuite writes")
 
         # map RER fields onto smartsuite fields
 
