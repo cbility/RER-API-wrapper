@@ -1,4 +1,4 @@
-"""Tests for RERClient.find_organisation() - POST /Organisations/{id}/Certificates/{certType}/FindOrganisation"""
+"""Tests for RERClient.find_transfer_organisation() - POST /Organisations/{id}/Certificates/{certType}/FindOrganisation"""
 
 import json
 from dataclasses import asdict
@@ -15,12 +15,12 @@ TARGET_ORG_NAME = "Furrowland Holdings Ltd"
 
 @pytest.fixture(scope="module")
 def hit(rer):
-    return rer.find_organisation(SEARCHING_ORG_ID, TARGET_ORG_REFERENCE)
+    return rer.find_transfer_organisation(SEARCHING_ORG_ID, TARGET_ORG_REFERENCE)
 
 
 @pytest.fixture(scope="module")
 def miss(rer):
-    return rer.find_organisation(SEARCHING_ORG_ID, "GEN9999999")
+    return rer.find_transfer_organisation(SEARCHING_ORG_ID, "GEN9999999")
 
 
 def test_hit_returns_dict(hit):
