@@ -1083,7 +1083,7 @@ wheels = [
 [[package]]
 name = "smartsuite-python"
 version = "0.1.0"
-source = { git = "https://github.com/cbility/smartsuite-python.git#126233ab4e745086b4d1147bd4d10d4e5bb9a129" }
+source = { git = "https://github.com/cbility/smartsuite-python.git#49bf76fc1ab830dc74f4b407758eb38647e311dd" }
 dependencies = [
     { name = "requests" },
 ]
