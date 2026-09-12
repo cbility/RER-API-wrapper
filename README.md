@@ -117,21 +117,6 @@ See `test/rer-html/README.md` for more details on HTML snapshots.
 
 The `test/rer-python/test_lambda_handler.py` file contains integration tests for the **API Wrapper Lambda handler** using cached HTML. These tests exercise the full handler workflow without making live requests to the RER portal or writing to SmartSuite.
 
-**Run API Wrapper tests:**
-```bash
-# Run all API Wrapper handler tests
-uv run pytest test/rer-python/test_lambda_handler.py -v
-
-# Run specific test
-uv run pytest test/rer-python/test_lambda_handler.py::test_handler_user_endpoint -v
-```
-
-**What's tested:**
-- Real `handler()` function from `rer_api_wrapper/lambda_handler.py`
-- Real `RERService` and `RERClient` classes
-- Cached HTML responses (no live RER requests)
-- HTTP endpoints: `/user`, `/user/organisations`, `/organisations/{id}`, etc.
-
 #### Scraper Handler Tests
 
 The `test/rer-python/test_scraper_handler.py` file contains integration tests for the **Scraper Lambda handler** with mocked SmartSuite operations. These tests verify the scraper workflow with different SmartSuite configurations.
