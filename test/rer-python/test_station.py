@@ -1,4 +1,4 @@
-"""Tests for RER_wrapper.get_station() - GET /Organisations/Stations/{stationId}"""
+"""Tests for RERClient.get_station() - GET /Organisations/Stations/{stationId}"""
 
 import json
 from dataclasses import asdict

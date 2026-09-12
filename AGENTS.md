@@ -2,7 +2,7 @@
 
 ## Repo Shape
 - Python 3.12 repo managed with `uv`.
-- Importable package code lives in `src/rer_api_wrapper/`; the public wrapper is `RER_wrapper` and the thin service facade is `RERService`.
+- Importable package code lives in `src/rer_api_wrapper/`; the public wrapper is `RERClient` and the thin service facade is `RERService`.
 - Response contracts are Pydantic dataclasses in `src/rer_api_wrapper/models.py`; prefer attributes over dict subscripting in new code.
 - `test/rer-python/` is live integration coverage against `rer.ofgem.gov.uk`, not offline unit tests.
 - `test/rer-html/` are helper scripts that fetch and save HTML fixtures; they write `*.html` files that are ignored.

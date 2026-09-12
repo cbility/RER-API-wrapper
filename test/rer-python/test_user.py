@@ -1,4 +1,4 @@
-"""Tests for RER_wrapper.get_user() - GET /User"""
+"""Tests for RERClient.get_user() - GET /User"""
 
 import json
 from dataclasses import asdict

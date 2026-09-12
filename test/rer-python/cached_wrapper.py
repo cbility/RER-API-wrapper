@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any
 import requests
 
-from rer_api_wrapper import RER_wrapper
+from rer_api_wrapper import RERClient
 
 FIXTURES_DIR = Path(__file__).parent.parent / "rer-html" / "snapshots" / "latest"
 """Default location for cached HTML fixtures."""
@@ -48,7 +48,7 @@ class CachedRERWrapper:
 
         Args:
             cache_dir: Directory containing cached HTML files. Defaults to FIXTURES_DIR.
-            auth_cookies: Ignored (kept for API compatibility with RER_wrapper).
+            auth_cookies: Ignored (kept for API compatibility with RERClient).
         """
         self.cache_dir = cache_dir or FIXTURES_DIR
         self._auth_cookies = auth_cookies  # Kept for compatibility

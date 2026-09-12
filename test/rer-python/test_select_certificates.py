@@ -2,8 +2,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from rer_api_wrapper import RER_wrapper
-
+from rer_api_wrapper import RERClient
 
 BREAKDOWN_HTML = """
 <form>
@@ -28,12 +27,14 @@ BREAKDOWN_HTML = """
 
 
 def test_select_certificates_posts_all_ranges_inclusive():
-    wrapper = RER_wrapper.__new__(RER_wrapper)
+    wrapper = RERClient.__new__(RERClient)
     get_response = Mock(text=BREAKDOWN_HTML)
     post_response = Mock()
     wrapper._request = Mock(side_effect=[get_response, post_response])
 
-    wrapper.select_certificates("GEN0202802", "rego", "Wind Farm", "Apr 2025", "May 2025")
+    wrapper.select_certificates(
+        "GEN0202802", "rego", "Wind Farm", "Apr 2025", "May 2025"
+    )
 
     endpoint = "Organisations/GEN0202802/Certificates/REGO/Breakdown"
     assert wrapper._request.call_args_list[0].args == (endpoint,)
@@ -41,7 +42,7 @@ def test_select_certificates_posts_all_ranges_inclusive():
     assert wrapper._request.call_args_list[1].kwargs == {
         "method": "POST",
         "data": {
-          "selectedCertificates": ["12345", "67890"],
+            "selectedCertificates": ["12345", "67890"],
             "addSelected": "addSelected",
             "__RequestVerificationToken": "csrf-token",
         },
@@ -49,12 +50,18 @@ def test_select_certificates_posts_all_ranges_inclusive():
 
 
 def test_select_certificates_rejects_existing_selection():
-    wrapper = RER_wrapper.__new__(RER_wrapper)
-    wrapper._request = Mock(return_value=Mock(text=BREAKDOWN_HTML.replace(
-        "<form>", "<form><button name=\"removeId\" value=\"12345\">Remove</button>"
-    )))
+    wrapper = RERClient.__new__(RERClient)
+    wrapper._request = Mock(
+        return_value=Mock(
+            text=BREAKDOWN_HTML.replace(
+                "<form>", '<form><button name="removeId" value="12345">Remove</button>'
+            )
+        )
+    )
 
     with pytest.raises(ValueError, match="already selected"):
-      wrapper.select_certificates("GEN0202802", "REGO", "Wind Farm", "Apr 2025", "May 2025")
+        wrapper.select_certificates(
+            "GEN0202802", "REGO", "Wind Farm", "Apr 2025", "May 2025"
+        )
 
     assert wrapper._request.call_count == 1

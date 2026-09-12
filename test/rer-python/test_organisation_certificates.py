@@ -1,4 +1,4 @@
-"""Tests for RER_wrapper.get_organisation_certificates() - GET /Organisations/{id}/Certificates"""
+"""Tests for RERClient.get_organisation_certificates() - GET /Organisations/{id}/Certificates"""
 
 import json
 from dataclasses import asdict

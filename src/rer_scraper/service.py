@@ -6,7 +6,7 @@ from datetime import datetime
 
 import requests
 
-from rer_api_wrapper import RER_wrapper
+from rer_api_wrapper import RERClient
 from rer_api_wrapper.models import (
     CertificatesOverview,
     OrganisationStation,
@@ -108,7 +108,7 @@ class RERScraperService:
         session_auth: SessionAuthClient,
         retry_invoker: RetryInvoker,
         function_name: str,
-        wrapper_factory: Callable[[dict[str, str]], RER_wrapper] = RER_wrapper,
+        wrapper_factory: Callable[[dict[str, str]], RERClient] = RERClient,
     ):
         self.smartsuite = smartsuite
         self.session_auth = session_auth
@@ -140,7 +140,7 @@ class RERScraperService:
 
         return 200, result
 
-    def get_current_data(self, rer: RER_wrapper):
+    def get_current_data(self, rer: RERClient):
         organisations = rer.get_user_organisations()
         logger.debug(organisations)
         organisation_stations = [
@@ -158,7 +158,7 @@ class RERScraperService:
 
     def prepare_transfer(
         self,
-        wrapper: RER_wrapper,
+        wrapper: RERClient,
         transfer: TransferInstruction,
     ) -> TransferPreparationResult:
         source_station = wrapper.get_station(transfer.source_station_id)
@@ -247,7 +247,7 @@ class RERScraperService:
         # map RER fields onto smartsuite fields
 
     @staticmethod
-    def _find_source_organisation_id(rer: RER_wrapper, station_id: str) -> str:
+    def _find_source_organisation_id(rer: RERClient, station_id: str) -> str:
         for organisation in rer.get_user_organisations():
             stations = rer.get_organisation_stations(organisation.organisation_id)
             if any(station.station_id == station_id for station in stations):
