@@ -1,11 +1,12 @@
 """Tests for RER_wrapper.get_organisation_certificates_breakdown() - GET /Organisations/{id}/Certificates/{type}/Breakdown"""
 
+import json
 from dataclasses import asdict
 import pytest
 
 from rer_api_wrapper.models import CertificateBreakdown
 
-ORG_ID = "GEN0202802"
+ORG_ID = "GEN0212970"  # Updated to match cached data
 
 
 @pytest.fixture(scope="module")
@@ -15,7 +16,7 @@ def rego_breakdown(rer):
 
 @pytest.fixture(scope="module")
 def roc_breakdown(rer):
-    return wrapper.get_organisation_certificates_breakdown(ORG_ID, "ROC")
+    return rer.get_organisation_certificates_breakdown(ORG_ID, "ROC")
 
 
 def test_rego_returns_dict(rego_breakdown):

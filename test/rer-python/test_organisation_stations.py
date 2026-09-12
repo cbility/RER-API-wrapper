@@ -1,9 +1,10 @@
 """Tests for RER_wrapper.get_organisation_stations() - GET /Organisations/{id}/Stations"""
 
+import json
 from dataclasses import asdict
 import pytest
 
-ORG_ID = "GEN0194833"
+ORG_ID = "GEN0212970"  # Updated to match cached data
 
 
 @pytest.fixture(scope="module")

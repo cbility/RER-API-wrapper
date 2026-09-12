@@ -53,9 +53,11 @@ def cmd_list(args):
         html_files = list(snapshot.rglob("response.html"))
 
         print(f"  {i+1}. {snapshot.name}{marker} ({len(html_files)} endpoints)")
-        print(
-            f"     Created: {snapshot.stat().st_mtime_datetime.strftime('%Y-%m-%d %H:%M')}"
-        )
+        # Use st_mtime instead of st_mtime_datetime (not available on all platforms)
+        import datetime
+
+        mtime = datetime.datetime.fromtimestamp(snapshot.stat().st_mtime)
+        print(f"     Created: {mtime.strftime('%Y-%m-%d %H:%M')}")
         print(f"     Path: {snapshot}")
         print()
 
@@ -118,8 +120,10 @@ def cmd_clean(args):
             delta = timedelta(weeks=num)
         elif unit == "m":
             delta = timedelta(days=num * 30)
+        else:
+            delta = timedelta(days=0)  # Fallback
 
-        cutoff = datetime.now() - delta
+        cutoff = datetime.now() - delta  # type: ignore[operator]
 
         to_delete = []
         for snapshot in snapshots:

@@ -156,18 +156,16 @@ class CachedRERWrapper:
                 f"Run 'uv run python test/rer-html/fetch_all_snapshots.py' to update cache."
             )
 
-        # Create a mock Response object
+        return self._load_cache_file(cache_file)
+
+    def _load_cache_file(self, cache_path: Path) -> requests.Response:
+        """Load cached HTML file and return as mock Response."""
         response = requests.Response()
         response.status_code = 200
-        response._content = cache_file.read_bytes()
+        response._content = cache_path.read_bytes()
         response.encoding = "utf-8"
-        response.url = f"https://rer.ofgem.gov.uk/{endpoint}"
-
+        response.url = f"https://rer.ofgem.gov.uk/{cache_path.parent.name}"
         return response
-
-    # Delegate all public methods to use _request
-    # This works because RER_wrapper methods call self._request internally
-    # We need to inherit from RER_wrapper to get all the methods
 
     def get_user(self):
         """GET /User - Returns user dashboard with stats and organisation list."""
@@ -238,11 +236,25 @@ class CachedRERWrapper:
         return rer_parsing._parse_certificates_overview(response.text, organisation_id)
 
     def get_station(self, station_id: str):
-        """GET /Organisations/Stations/{stationId} - Returns full station detail."""
+        """GET /Organisations/Stations/{stationId} - Returns full station detail.
+
+        Note: This searches all cached organisations for the station.
+        """
         from rer_api_wrapper import parsing as rer_parsing
 
-        response = self._request(f"Organisations/Stations/{station_id}")
-        return rer_parsing._parse_station(response.text, station_id)
+        # Search all organisations for this station
+        for org_dir in self.cache_dir.iterdir():
+            if not org_dir.is_dir() or not org_dir.name.startswith("GEN"):
+                continue
+            cache_path = org_dir / f"_stations_{station_id}" / "response.html"
+            if cache_path.exists():
+                response = self._load_cache_file(cache_path)
+                return rer_parsing._parse_station(response.text, station_id)
+
+        raise FileNotFoundError(
+            f"Cached station not found for {station_id}. "
+            f"Searched in {self.cache_dir}"
+        )
 
     def get_organisation_output_data_tasks(
         self,
@@ -311,7 +323,7 @@ class CachedRERWrapper:
             f"Organisations/{organisation_id}/Certificates/{cert_type}/FindOrganisation"
         )
         response = self._request(endpoint)
-        return rer_parsing._parse_organisation_search_result(response.text)
+        return rer_parsing._parse_find_organisation(response.text)
 
     def select_certificates(
         self,
@@ -337,7 +349,7 @@ class CachedRERWrapper:
         response = self._request(
             f"Organisations/{organisation_id}/Certificates/{cert_type}/Breakdown"
         )
-        return rer_parsing._parse_certificates_breakdown(
+        return rer_parsing._parse_certificate_breakdown(
             response.text, organisation_id, cert_type
         )
 
@@ -355,7 +367,7 @@ class CachedRERWrapper:
             f"Organisations/{organisation_id}/Certificates/{cert_type}/History",
             params=params,
         )
-        return rer_parsing._parse_certificates_history(
+        return rer_parsing._parse_certificate_history(
             response.text, organisation_id, cert_type
         )
 

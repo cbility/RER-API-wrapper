@@ -1,5 +1,6 @@
 """Tests for RER_wrapper.get_organisation_station_declarations() - GET /Organisations/{id}/StationDeclarations"""
 
+import json
 from dataclasses import asdict
 import pytest
 import re
@@ -16,7 +17,7 @@ def first_org_id(rer):
 
 @pytest.fixture(scope="module")
 def declarations(rer, first_org_id):
-    return wrapper.get_organisation_station_declarations(first_org_id)
+    return rer.get_organisation_station_declarations(first_org_id)
 
 
 def test_returns_station_declaration_list(declarations):

@@ -1,16 +1,21 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
 
-from rer_scraper.models import ScraperOperations, TransferInstruction
+from rer_scraper.models import TransferInstruction
 from rer_scraper.service import RERScraperService
 
 
 class StubSmartSuiteClient:
-    def __init__(self, operations: ScraperOperations):
+    def __init__(
+        self, operations: list[Literal["refresh_data", "transfer_certificates"]]
+    ):
         self.operations = operations
 
-    def get_operations(self) -> ScraperOperations:
+    def get_operations(
+        self, launch_time
+    ) -> list[Literal["refresh_data", "transfer_certificates"]]:
         return self.operations
 
 
@@ -33,7 +38,7 @@ class StubRetryInvoker:
 
 
 def make_service(
-    operations: ScraperOperations,
+    operations: list[Literal["refresh_data", "transfer_certificates"]],
     cookies: dict[str, str] | None,
     retry_invoker: StubRetryInvoker,
 ) -> RERScraperService:
@@ -47,7 +52,7 @@ def make_service(
 
 def test_exits_early_without_operations():
     retry_invoker = StubRetryInvoker()
-    service = make_service(ScraperOperations(), {"session": "cached"}, retry_invoker)
+    service = make_service([], {"session": "cached"}, retry_invoker)
 
     status_code, result = service.run()
 
@@ -58,7 +63,7 @@ def test_exits_early_without_operations():
 
 def test_schedules_retry_when_session_auth_is_refreshing():
     retry_invoker = StubRetryInvoker()
-    service = make_service(ScraperOperations(refresh_data=True), None, retry_invoker)
+    service = make_service(["refresh_data"], None, retry_invoker)
 
     status_code, result = service.run()
 
@@ -70,7 +75,7 @@ def test_schedules_retry_when_session_auth_is_refreshing():
 
 def test_does_not_schedule_nested_retry_for_async_execution():
     retry_invoker = StubRetryInvoker()
-    service = make_service(ScraperOperations(refresh_data=True), None, retry_invoker)
+    service = make_service(["refresh_data"], None, retry_invoker)
 
     status_code, result = service.run(schedule_retry=False)
 
@@ -88,6 +93,9 @@ class StubStation:
 @dataclass
 class StubStationList:
     stations: list[StubStation]
+
+    def __iter__(self):
+        return iter(self.stations)
 
 
 @dataclass
@@ -110,7 +118,9 @@ class StubWrapper:
     def get_station(self, station_id: str) -> StubStation:
         return StubStation(station_id, "Wind Farm")
 
-    def find_transfer_organisation(self, organisation_id: str, recipient_reference: str, cert_type: str):
+    def find_transfer_organisation(
+        self, organisation_id: str, recipient_reference: str, cert_type: str
+    ):
         return object()
 
     def select_certificates(self, *arguments: object) -> None:
@@ -119,21 +129,29 @@ class StubWrapper:
 
 def test_prepares_inclusive_transfer_range():
     wrapper = StubWrapper()
-    service = make_service(ScraperOperations(), {"session": "cached"}, StubRetryInvoker())
+    service = make_service([], {"session": "cached"}, StubRetryInvoker())
     transfer = TransferInstruction("STATION1", "GEN2", "Apr 2025", "Jun 2025")
 
     result = service.prepare_transfer(wrapper, transfer)  # type: ignore[arg-type]
 
     assert result.selected is True
-    assert wrapper.select_arguments == ("GEN1", "REGO", "Wind Farm", "Apr 2025", "Jun 2025")
+    assert wrapper.select_arguments == (
+        "GEN1",
+        "REGO",
+        "Wind Farm",
+        "Apr 2025",
+        "Jun 2025",
+    )
 
 
 def test_treats_missing_certificate_ranges_as_successful_no_op():
     class NoMatchWrapper(StubWrapper):
         def select_certificates(self, *arguments: object) -> None:
-            raise ValueError("No REGO certificate ranges match station 'Wind Farm' between 'Apr 2025' and 'Jun 2025'.")
+            raise ValueError(
+                "No REGO certificate ranges match station 'Wind Farm' between 'Apr 2025' and 'Jun 2025'."
+            )
 
-    service = make_service(ScraperOperations(), {"session": "cached"}, StubRetryInvoker())
+    service = make_service([], {"session": "cached"}, StubRetryInvoker())
     result = service.prepare_transfer(
         NoMatchWrapper(),  # type: ignore[arg-type]
         TransferInstruction("STATION1", "GEN2", "Apr 2025", "Jun 2025"),

@@ -1,5 +1,6 @@
 """Tests for RER_wrapper.get_organisation_output_data() - GET /Organisations/{id}/Tasks/OutputData"""
 
+import json
 from dataclasses import asdict
 import pytest
 import re
@@ -18,7 +19,7 @@ def first_org_id(rer):
 
 @pytest.fixture(scope="module")
 def output_data(rer, first_org_id):
-    return wrapper.get_organisation_output_data_tasks(first_org_id)
+    return rer.get_organisation_output_data_tasks(first_org_id)
 
 
 def test_returns_dict(output_data):

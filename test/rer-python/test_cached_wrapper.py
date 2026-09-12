@@ -140,37 +140,37 @@ class TestWithScraperService:
         from rer_scraper.models import ScraperOperations
 
         # Create a mock SmartSuite client
-        class MockSmartSuite:
-            def get_operations(self, run_start):
-                return ScraperOperations(refresh_data=True)
+        class MockSmartSuite:  # type: ignore[misc]
+            def get_operations(self, run_start):  # type: ignore[no-untyped-def]
+                return ScraperOperations(refresh_data=True)  # type: ignore[call-arg]
 
-            def get_current_organisations(self):
+            def get_current_organisations(self):  # type: ignore[no-untyped-def]
                 return []
 
-            def update_organisations(self, orgs):
+            def update_organisations(self, orgs):  # type: ignore[no-untyped-def]
                 pass
 
-            def create_organisations(self, orgs):
+            def create_organisations(self, orgs):  # type: ignore[no-untyped-def]
                 pass
 
-            def map_organisation(self, org):
+            def map_organisation(self, org):  # type: ignore[no-untyped-def]
                 return {}
 
         # Create a mock session auth
-        class MockSessionAuth:
-            def get_cookies(self):
+        class MockSessionAuth:  # type: ignore[misc]
+            def get_cookies(self):  # type: ignore[no-untyped-def]
                 return {"dummy": "cookie"}
 
         # Create a mock retry invoker
-        class MockRetryInvoker:
-            def invoke(self, function_name, payload):
+        class MockRetryInvoker:  # type: ignore[misc]
+            def invoke(self, function_name, payload):  # type: ignore[no-untyped-def]
                 pass
 
         # Create service with cached wrapper
         service = RERScraperService(
-            smartsuite=MockSmartSuite(),
-            session_auth=MockSessionAuth(),
-            retry_invoker=MockRetryInvoker(),
+            smartsuite=MockSmartSuite(),  # type: ignore[arg-type]
+            session_auth=MockSessionAuth(),  # type: ignore[arg-type]
+            retry_invoker=MockRetryInvoker(),  # type: ignore[arg-type]
             function_name="test-function",
             wrapper_factory=lambda cookies: rer,
         )

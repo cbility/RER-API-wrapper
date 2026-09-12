@@ -1,11 +1,12 @@
 """Tests for RER_wrapper.get_organisation_certificates() - GET /Organisations/{id}/Certificates"""
 
+import json
 from dataclasses import asdict
 import pytest
 
 from rer_api_wrapper.models import CertificatesOverview
 
-ORG_ID = "GEN0202802"
+ORG_ID = "GEN0212970"  # Updated to match cached data
 
 
 def pytest_configure(config):

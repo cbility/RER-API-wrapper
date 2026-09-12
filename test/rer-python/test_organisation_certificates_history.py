@@ -1,12 +1,13 @@
 """Tests for RER_wrapper.get_organisation_certificates_history() - GET /Organisations/{id}/Certificates/{type}/History"""
 
+import json
 from dataclasses import asdict
 import pytest
 
 
 from rer_api_wrapper.models import CertificateHistory
 
-ORG_ID = "GEN0202802"
+ORG_ID = "GEN0212970"  # Updated to match cached data
 FROM_DATE = "05/01/2024 00:00:00 +01:00"
 TO_DATE = "04/07/2026 12:14:27 +01:00"
 

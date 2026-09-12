@@ -1,5 +1,7 @@
 """Tests for RER_wrapper.find_organisation() - POST /Organisations/{id}/Certificates/{certType}/FindOrganisation"""
 
+import json
+from dataclasses import asdict
 import pytest
 
 from rer_api_wrapper.models import OrganisationSearchResult

@@ -1,4 +1,5 @@
 """Live output test for RERScraperService.refresh_data()."""
+
 import json
 from dataclasses import asdict
 from pathlib import Path
@@ -9,14 +10,13 @@ from rer_api_wrapper import RER_wrapper
 from rer_scraper.models import ScraperOperations
 from rer_scraper.service import RERScraperService
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 COOKIES_FILE = REPO_ROOT / "rer_cookies.json"
 
 
 class StubSmartSuiteClient:
-    def get_operations(self) -> ScraperOperations:
-        return ScraperOperations()
+    def get_operations(self, launch_time) -> list[str]:
+        return ["refresh_data"]
 
 
 class StubSessionAuthClient:
