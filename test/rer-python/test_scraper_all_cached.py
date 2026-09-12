@@ -26,6 +26,7 @@ Requirements:
 """
 
 import logging
+import os
 import pytest
 from unittest.mock import Mock
 from pathlib import Path
@@ -38,9 +39,16 @@ from cached_wrapper import CachedRERWrapper, FIXTURES_DIR
 
 # Configure logging to show during tests
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.DEBUG,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    datefmt="%H:%M:%S",
 )
 logger = logging.getLogger(__name__)
+
+# Suppress verbose logs from external libraries
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 
 @pytest.fixture(scope="module")
@@ -74,10 +82,9 @@ def real_smartsuite():
     - Provide real SMARTSUITE_ACCOUNT_ID and SMARTSUITE_API_TOKEN
     - The real SmartSuite API will be called
     """
-    # Create REAL RERSmartSuiteClient with test credentials
-    # These won't be used when dry_run=True, but are required to instantiate the client
-    account_id = "test-account-id"
-    api_token = "test-api-token"
+
+    account_id = os.getenv("SMARTSUITE_ACCOUNT_ID", "test-account-id")
+    api_token = os.getenv("SMARTSUITE_API_TOKEN", "test-api-token")
 
     client = RERSmartSuiteClient(account_id=account_id, api_token=api_token)
 
@@ -137,6 +144,11 @@ class TestScraperAllCachedData:
         5. Confirms dry_run mode prevents SmartSuite writes
         """
         caplog.set_level(logging.DEBUG)
+
+        # Enable logging from rer_scraper modules
+        logging.getLogger("rer_scraper.smartsuite").setLevel(logging.DEBUG)
+        logging.getLogger("rer_scraper.service").setLevel(logging.DEBUG)
+
         logger.info("=" * 80)
         logger.info("Starting full scrape of ALL cached organisations")
         logger.info("=" * 80)
@@ -152,7 +164,7 @@ class TestScraperAllCachedData:
             dry_run=True,
         )
 
-        logger.info("✓ RERScraperService created (dry_run=True)")
+        logger.info(f"✓ RERScraperService created (dry_run={service.dry_run})")
 
         # Run the service
         status_code, result = service.run()
@@ -163,18 +175,15 @@ class TestScraperAllCachedData:
         assert status_code == 200, f"Expected 200, got {status_code}"
         assert result is not None, "Result should not be None"
 
-        # Verify dry_run mode prevented writes
-        # The real service.update_rer_organisations() checks dry_run flag
-        # and skips calling smartsuite.update_organisations() when True
-        logger.info("✓ Verified: No SmartSuite writes (dry_run mode active)")
-
         # Log summary
         logger.info("=" * 80)
         logger.info("TEST SUMMARY")
         logger.info("=" * 80)
         logger.info(f"Status Code: {status_code}")
-        logger.info(f"Dry Run: True")
-        logger.info(f"SmartSuite Updates: 0 (mocked)")
+        logger.info(f"Dry Run: {service.dry_run}")
+        logger.info(
+            f"SmartSuite writes: {'SKIPPED' if service.dry_run else 'EXECUTED'}"
+        )
         logger.info("=" * 80)
 
     def test_individual_organisation_scrape(

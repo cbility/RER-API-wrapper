@@ -142,17 +142,20 @@ class RERScraperService:
 
     def get_current_data(self, rer: RERClient):
         organisations = rer.get_user_organisations()
-        logger.debug(organisations)
+        logger.info(f"Fetched {len(organisations)} organisations from RER")
+        logger.debug(f"Organisations: {organisations}")
         organisation_stations = [
             rer.get_organisation_stations(organisation.organisation_id)
             for organisation in organisations
         ]
-        logger.debug(organisation_stations)
+        logger.info(f"Fetched stations for {len(organisation_stations)} organisations")
+        logger.debug(f"Stations: {organisation_stations}")
         organisation_certificates = [
             rer.get_organisation_certificates(organisation.organisation_id)
             for organisation in organisations
         ]
-        logger.debug(organisation_certificates)
+        logger.info(f"Fetched certificates for {len(organisation_certificates)} organisations")
+        logger.debug(f"Certificates: {organisation_certificates}")
 
         return organisations, organisation_stations, organisation_certificates
 

@@ -43,5 +43,11 @@ mypy_path = ["src", "session_auth"]
 pythonVersion = "3.12"
 extraPaths = ["src", "session_auth"]
 
+[tool.pytest.ini_options]
+log_cli = true
+log_cli_level = "INFO"
+log_cli_format = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+log_cli_date_format = "%H:%M:%S"
+
 [tool.uv.sources]
 smartsuite-python = { git = "https://github.com/cbility/smartsuite-python.git" }
