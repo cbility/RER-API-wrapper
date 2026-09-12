@@ -357,12 +357,18 @@ class CachedRERWrapper:
         self,
         organisation_id: str,
         cert_type: str,
+        from_date: str | None = None,
+        to_date: str | None = None,
         page_number: int = 1,
     ):
         """GET /Organisations/{organisationId}/Certificates/{certType}/History"""
         from rer_api_wrapper import parsing as rer_parsing
 
-        params = {"pageNumber": page_number}
+        params: dict[str, object] = {"pageNumber": page_number}
+        if from_date:
+            params["fromDate"] = from_date
+        if to_date:
+            params["toDate"] = to_date
         response = self._request(
             f"Organisations/{organisation_id}/Certificates/{cert_type}/History",
             params=params,
