@@ -1,5 +1,6 @@
 """Tests for RER_wrapper.get_organisation() - GET /Organisations/OrganisationReview/{id}"""
 
+import json
 from dataclasses import asdict
 import pytest
 

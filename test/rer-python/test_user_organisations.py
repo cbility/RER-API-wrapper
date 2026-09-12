@@ -1,5 +1,6 @@
 """Tests for RER_wrapper.get_user_organisations() - GET /User (all pages)"""
 
+import json
 from dataclasses import asdict
 import pytest
 
