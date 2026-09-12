@@ -240,7 +240,40 @@ def main():
             except Exception as e:
                 log.error(f"  ✗ Certificate breakdown: {e}")
 
-            # 8. Individual station details (from stations list)
+            # 8. Certificate history (need to get cert types first)
+            try:
+                log.info("  Fetching certificates for history...")
+                certs_overview = wrapper.get_organisation_certificates(org_id)
+
+                # Get unique certificate types
+                cert_types = set()
+                if hasattr(certs_overview, "summaries") and certs_overview.summaries:
+                    for summary in certs_overview.summaries:
+                        if hasattr(summary, "cert_type"):
+                            cert_types.add(summary.cert_type)
+
+                # Fetch history for each cert type
+                for cert_type in cert_types:
+                    try:
+                        log.info(f"    Fetching {cert_type} history...")
+                        response = wrapper._request(
+                            f"Organisations/{org_id}/Certificates/{cert_type}/History"
+                        )
+                        parsed = wrapper.get_organisation_certificates_history(
+                            org_id, cert_type
+                        )
+                        save_snapshot(
+                            org_id,
+                            f"/certificates/{cert_type}/history",
+                            response.text,
+                            dataclass_to_dict(parsed),
+                        )
+                    except Exception as e:
+                        log.error(f"    ✗ {cert_type} history: {e}")
+            except Exception as e:
+                log.error(f"  ✗ Certificate history: {e}")
+
+            # 9. Individual station details (from stations list)
             try:
                 stations = wrapper.get_organisation_stations(org_id)
                 for station in stations[
