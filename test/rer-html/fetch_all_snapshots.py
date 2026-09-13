@@ -130,7 +130,7 @@ def main():
             try:
                 log.info("  Fetching organisation details...")
                 response = client._request(f"Organisations/OrganisationReview/{org_id}")
-                parsed = client.get_organisation(org_id)
+                parsed = client.get_organisation_detail(org_id)
                 save_snapshot(
                     org_id, "/organisation", response.text, dataclass_to_dict(parsed)
                 )

@@ -144,7 +144,9 @@ class RERClient:
 
         return rer_parsing._parse_user_organisations(pages)
 
-    def get_organisation(self, organisation_id: str) -> rer_parsing.OrganisationDetail:
+    def get_organisation_detail(
+        self, organisation_id: str
+    ) -> rer_parsing.OrganisationDetail:
         """GET /Organisations/OrganisationReview/{organisationId} - Returns organisation details."""
         response = self._request(f"Organisations/OrganisationReview/{organisation_id}")
         return rer_parsing._parse_organisation(response.text)

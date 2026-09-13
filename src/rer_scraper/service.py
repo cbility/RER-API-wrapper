@@ -1,6 +1,6 @@
 # region imports
 import json
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from typing import Any, Callable, Protocol
 from datetime import datetime
 from unittest import result
@@ -12,6 +12,7 @@ from rer_client.models import (
     CertificatesOverview,
     OrganisationStation,
     OrganisationSummary,
+    OrganisationDetail,
 )
 from rer_scraper.models import (
     RefreshResult,
@@ -33,6 +34,16 @@ logger = logging.getLogger(__name__)
 
 
 # region support classes
+
+
+@dataclass
+class REROrganisation:
+    """Container for organisation summary and details"""
+
+    org_summary: OrganisationSummary
+    org_detail: OrganisationDetail
+
+
 class RetryInvoker(Protocol):
     """
     Protocol defining a contract for triggering retry executions of the scraper Lambda function.
@@ -158,25 +169,32 @@ class RERScraperService:
     # region data refresh helpers
 
     def get_current_data(self, rer: RERClient):
-        organisations = rer.get_user_org_summary()
-        logger.info(f"Fetched {len(organisations)} user organisations")
-        logger.debug(f"Organisations: {organisations}")
+        organisation_summaries = rer.get_user_org_summary()
+        logger.info(
+            f"Fetched {len(organisation_summaries)} organisations for logged in user. Getting extra info for each organisation..."
+        )
+        organisations = []
+        for org_summary in organisation_summaries:
+            org_detail = rer.get_organisation_detail(org_summary.organisation_id)
+            organisations.append(REROrganisation(org_summary, org_detail))
+
+        # logger.debug(f"Organisations: {organisations}")
         organisation_stations = [
             rer.get_organisation_stations(organisation.organisation_id)
-            for organisation in organisations
+            for organisation in organisation_summaries
         ]
         logger.info(f"Fetched stations for {len(organisation_stations)} organisations")
         logger.debug(f"Stations: {organisation_stations}")
         organisation_certificates = [
             rer.get_organisation_certificates(organisation.organisation_id)
-            for organisation in organisations
+            for organisation in organisation_summaries
         ]
         logger.info(
             f"Fetched certificates for {len(organisation_certificates)} organisations"
         )
         logger.debug(f"Certificates: {organisation_certificates}")
 
-        return organisations, organisation_stations, organisation_certificates
+        return organisation_summaries, organisation_stations, organisation_certificates
 
     def update_rer_organisations(
         self,
