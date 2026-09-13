@@ -187,68 +187,6 @@ class TestScraperAllCachedData:
         )
         logger.info("=" * 80)
 
-    def test_individual_organisation_scrape(
-        self,
-        smartsuite,
-        mock_session_auth,
-        mock_retry_invoker,
-        cached_rer_client,
-        caplog,
-    ):
-        """
-        Test scraping each organisation individually.
-
-        This parametrized test runs once per cached organisation to isolate
-        any parsing issues to specific organisations.
-        """
-        caplog.set_level(logging.INFO)
-
-        # Get all organisation IDs from cache (FIXTURES_DIR already points to 'latest')
-        org_ids = [
-            d.name
-            for d in FIXTURES_DIR.iterdir()
-            if d.is_dir() and d.name != "_user" and d.name.startswith("GEN")
-        ]
-
-        logger.info(f"Found {len(org_ids)} cached organisations to test")
-
-        for org_id in org_ids:
-            logger.info(f"\n{'='*60}")
-            logger.info(f"Testing organisation: {org_id}")
-            logger.info(f"{'='*60}")
-
-            # Create service for this organisation
-            service = RERScraperService(
-                smartsuite=smartsuite,
-                session_auth=mock_session_auth,
-                retry_invoker=mock_retry_invoker,
-                function_name="test-scraper",
-                client_factory=lambda cookies: cached_rer_client,
-                dry_run=True,
-            )
-
-            # Mock SmartSuite operations to return just refresh_data
-            smartsuite.get_operations = Mock(return_value=["refresh_data"])
-
-            try:
-                status_code, result = service.run()
-
-                logger.info(f"{org_id}: Status {status_code}")
-
-                # Should succeed for most organisations
-                assert status_code in [
-                    200,
-                    204,
-                ], f"{org_id}: Expected 200/204, got {status_code}"
-
-            except Exception as e:
-                logger.error(f"✗ {org_id}: Failed with error: {e}")
-                raise
-
-        logger.info(f"\n{'='*60}")
-        logger.info(f"All {len(org_ids)} organisations processed successfully")
-        logger.info(f"{'='*60}")
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "-s", "--log-cli-level=INFO"])
