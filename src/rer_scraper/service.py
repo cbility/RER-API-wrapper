@@ -142,7 +142,7 @@ class RERScraperService:
 
     def get_current_data(self, rer: RERClient):
         organisations = rer.get_user_organisations()
-        logger.info(f"Fetched {len(organisations)} organisations from RER")
+        logger.info(f"Fetched {len(organisations)} organisations")
         logger.debug(f"Organisations: {organisations}")
         organisation_stations = [
             rer.get_organisation_stations(organisation.organisation_id)
