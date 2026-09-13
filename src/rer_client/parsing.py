@@ -117,15 +117,37 @@ def _parse_organisation(html: str) -> OrganisationDetail:
         return result
 
     org_dict = dl_to_dict(dls[0]) if len(dls) > 0 else {}
-    addr_dict = dl_to_dict(dls[1]) if len(dls) > 1 else {}
     contact_dict = dl_to_dict(dls[2]) if len(dls) > 2 else {}
+
+    # Parse address separately to preserve line breaks
+    # Find the dl that contains "Address" label
+    address_lines = []
+    for dl in dls:
+        dts = dl.css("dt")
+        dds = dl.css("dd")
+        for dt, dd in zip(dts, dds):
+            if dt.text(strip=True) == "Address":
+                # Get the span containing address lines
+                span = dd.css_first("span")
+                if span:
+                    # Iterate over child nodes to get text separated by <br/> tags
+                    address_lines = [
+                        child.text(strip=True)
+                        for child in span.iter(include_text=True)
+                        if child.text(strip=True)
+                    ]
+                    # Fallback: if no children, just get the text
+                    if not address_lines:
+                        address_text = span.text(separator=" ", strip=True)
+                        address_lines = [address_text] if address_text else []
+                break
 
     return OrganisationDetail(
         organisation_id=org_dict.get("Organisation reference", ""),
         name=org_dict.get("Organisation name", ""),
         type=org_dict.get("Organisation type", ""),
         status=org_dict.get("Account status", ""),
-        address=addr_dict.get("Address", ""),
+        address=address_lines,
         contact=OrganisationContact(
             name=contact_dict.get("Name", ""),
             email=contact_dict.get("Email address", ""),

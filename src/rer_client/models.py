@@ -112,7 +112,7 @@ class OrganisationDetail(RERModel):
         name: Organisation/company name
         type: Organisation type (e.g., "Generator Commercial", "Generator Domestic")
         status: Account approval status (e.g., "APPROVED", "Pending", "Revoked")
-        address: Full registered address as a single string (street, city, postcode, country)
+        address: Registered address as a list of lines (street, city, postcode, country)
         contact: Primary contact person's name and email
 
     Example:
@@ -120,7 +120,13 @@ class OrganisationDetail(RERModel):
         name: "GLENSKINNO BIOFUELS LTD"
         type: "Generator Commercial"
         status: "APPROVED"
-        address: "2 Stewart Street Milngavie GLASGOW G62 6BW Scotland"
+        address: [
+            "2 Stewart Street",
+            "Milngavie",
+            "GLASGOW",
+            "G62 6BW",
+            "Scotland"
+        ]
         contact: OrganisationContact(
             name="Catherine Smith",
             email="catherine@asaw.co.uk"
@@ -131,7 +137,7 @@ class OrganisationDetail(RERModel):
     name: str  # Organisation/company name
     type: str  # Organisation type, e.g., "Generator Commercial"
     status: str  # Account status, e.g., "APPROVED"
-    address: str  # Full registered address (street, city, postcode, country)
+    address: list[str]  # Address lines (street, city, postcode, country)
     contact: OrganisationContact  # Primary contact information
 
 

@@ -46,11 +46,15 @@ def test_status_is_nonempty_string(organisation):
     assert len(organisation["status"]) > 0
 
 
-def test_address_is_nonempty_string(organisation):
-    assert isinstance(organisation["address"], str)
+def test_address_is_nonempty_list(organisation):
+    assert isinstance(organisation["address"], list)
     assert len(organisation["address"]) > 0
-    # Should contain street, city, postcode, and country
-    assert " " in organisation["address"]
+    # Should have multiple lines (street, city, postcode, country)
+    assert len(organisation["address"]) >= 3
+    # Each line should be a non-empty string
+    for line in organisation["address"]:
+        assert isinstance(line, str)
+        assert len(line) > 0
 
 
 def test_contact_has_required_fields(organisation):
