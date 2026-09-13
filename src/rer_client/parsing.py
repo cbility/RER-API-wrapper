@@ -8,13 +8,11 @@ from rer_client.models import (
     CertificateHistoryMonth,
     CertificatesOverview,
     CertificateTypeSummary,
-    OrganisationAddress,
     OrganisationContact,
     OrganisationDetail,
     OrganisationSearchResult,
     OrganisationStation,
     OrganisationSummary,
-    OrganisationTab,
     OutputDataTask,
     OutputDataTaskList,
     SchemeAccreditation,
@@ -122,28 +120,16 @@ def _parse_organisation(html: str) -> OrganisationDetail:
     addr_dict = dl_to_dict(dls[1]) if len(dls) > 1 else {}
     contact_dict = dl_to_dict(dls[2]) if len(dls) > 2 else {}
 
-    # Tab navigation
-    tabs = []
-    for a in tree.css(".moj-sub-navigation a"):
-        url = a.attrs.get("href", "")
-        if not url:
-            raise ValueError("Tab link does not have href")
-        tabs.append(OrganisationTab(name=a.text(strip=True), url=url))
-
     return OrganisationDetail(
         organisation_id=org_dict.get("Organisation reference", ""),
         name=org_dict.get("Organisation name", ""),
         type=org_dict.get("Organisation type", ""),
         status=org_dict.get("Account status", ""),
-        address=OrganisationAddress(
-            name=addr_dict.get("Name", ""),
-            address=addr_dict.get("Address", ""),
-        ),
+        address=addr_dict.get("Address", ""),
         contact=OrganisationContact(
             name=contact_dict.get("Name", ""),
             email=contact_dict.get("Email address", ""),
         ),
-        tabs=tabs,
     )
 
 

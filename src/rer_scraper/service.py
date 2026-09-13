@@ -173,32 +173,32 @@ class RERScraperService:
         logger.info(
             f"Fetched {len(organisation_summaries)} organisations for logged in user. Getting extra info for each organisation..."
         )
-        organisations = []
+        organisations: list[REROrganisation] = []
         for org_summary in organisation_summaries:
             org_detail = rer.get_organisation_detail(org_summary.organisation_id)
             organisations.append(REROrganisation(org_summary, org_detail))
 
         # logger.debug(f"Organisations: {organisations}")
         organisation_stations = [
-            rer.get_organisation_stations(organisation.organisation_id)
-            for organisation in organisation_summaries
+            rer.get_organisation_stations(org.org_summary.organisation_id)
+            for org in organisations
         ]
         logger.info(f"Fetched stations for {len(organisation_stations)} organisations")
         logger.debug(f"Stations: {organisation_stations}")
         organisation_certificates = [
-            rer.get_organisation_certificates(organisation.organisation_id)
-            for organisation in organisation_summaries
+            rer.get_organisation_certificates(org.org_summary.organisation_id)
+            for org in organisations
         ]
         logger.info(
             f"Fetched certificates for {len(organisation_certificates)} organisations"
         )
         logger.debug(f"Certificates: {organisation_certificates}")
 
-        return organisation_summaries, organisation_stations, organisation_certificates
+        return organisations, organisation_stations, organisation_certificates
 
     def update_rer_organisations(
         self,
-        organisations: list[OrganisationSummary],
+        organisations: list[REROrganisation],
     ):
         """
         Updates organisation and station records on SmartSuite with the passed details.
@@ -222,16 +222,23 @@ class RERScraperService:
                     ss_org
                     for ss_org in ss_organisations
                     if self.smartsuite.get_organisation_id(ss_org)
-                    == org.organisation_id
+                    == org.org_summary.organisation_id
                 ),
                 None,
             )
             if ss_org_record is not None:
                 update_orgs.append(
-                    {**self.smartsuite.map_organisation(org), "id": ss_org_record["id"]}
+                    {
+                        **self.smartsuite.map_organisation(
+                            org.org_summary, org.org_detail
+                        ),
+                        "id": ss_org_record["id"],
+                    }
                 )
             else:
-                insert_orgs.append(self.smartsuite.map_organisation(org))
+                insert_orgs.append(
+                    self.smartsuite.map_organisation(org.org_summary, org.org_detail)
+                )
 
         if update_orgs:
             logger.info(f"{len(update_orgs)} organisations to UPDATE")

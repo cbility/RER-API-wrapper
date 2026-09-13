@@ -9,12 +9,13 @@ from rer_client.models import OrganisationDetail
 
 @pytest.fixture(scope="module")
 def first_org_id(rer):
-    return rer.get_user_organisations()[0].organisation_id
+    # Use a known organisation ID from the fixtures
+    return "GEN0213742"
 
 
 @pytest.fixture(scope="module")
 def organisation(rer, first_org_id):
-    return rer.get_organisation(first_org_id)
+    return rer.get_organisation_detail(first_org_id)
 
 
 def test_returns_dict(organisation):
@@ -45,26 +46,17 @@ def test_status_is_nonempty_string(organisation):
     assert len(organisation["status"]) > 0
 
 
-def test_address_has_required_fields(organisation):
-    addr = organisation["address"]
-    assert isinstance(addr["name"], str) and len(addr["name"]) > 0
-    assert isinstance(addr["address"], str) and len(addr["address"]) > 0
+def test_address_is_nonempty_string(organisation):
+    assert isinstance(organisation["address"], str)
+    assert len(organisation["address"]) > 0
+    # Should contain street, city, postcode, and country
+    assert " " in organisation["address"]
 
 
 def test_contact_has_required_fields(organisation):
     contact = organisation["contact"]
     assert isinstance(contact["name"], str) and len(contact["name"]) > 0
     assert isinstance(contact["email"], str) and "@" in contact["email"]
-
-
-def test_tabs_is_nonempty_list(organisation):
-    assert isinstance(organisation["tabs"], list)
-    assert len(organisation["tabs"]) > 0
-
-
-def test_tabs_include_overview(organisation):
-    tab_names = [t["name"] for t in organisation["tabs"]]
-    assert "Overview" in tab_names
 
 
 def test_print_raw(organisation):

@@ -88,19 +88,6 @@ class User(RERModel):
 
 
 @dataclass
-class OrganisationAddress(RERModel):
-    """Organisation's registered address.
-
-    Example:
-        name: "GLENSKINNO BIOFUELS LTD"
-        address: " 2 Stewart Street Milngavie GLASGOW G62 6BW Scotland "
-    """
-
-    name: str  # Organisation name at this address
-    address: str  # Full postal address including postcode and country
-
-
-@dataclass
 class OrganisationContact(RERModel):
     """Primary contact information for an organisation.
 
@@ -114,39 +101,38 @@ class OrganisationContact(RERModel):
 
 
 @dataclass
-class OrganisationTab(RERModel):
-    """Navigation tab from organisation page.
-
-    Example:
-        name: "Overview"
-        url: "/Organisations/GEN0213742"
-
-    Available tabs: Overview, Stations, Declarations, Output Data,
-    Certificates, Reports, Settings, Activity
-    """
-
-    name: str  # Tab display name
-    url: str  # Relative URL to the tab's page
-
-
-@dataclass
 class OrganisationDetail(RERModel):
     """Detailed information about an organisation from /Organisations/{id}.
+
+    Represents the complete organisation overview page, including address,
+    contact details, and company registration information.
+
+    Fields:
+        organisation_id: Unique identifier (e.g., "GEN0213742")
+        name: Organisation/company name
+        type: Organisation type (e.g., "Generator Commercial", "Generator Domestic")
+        status: Account approval status (e.g., "APPROVED", "Pending", "Revoked")
+        address: Full registered address as a single string (street, city, postcode, country)
+        contact: Primary contact person's name and email
 
     Example:
         organisation_id: "GEN0213742"
         name: "GLENSKINNO BIOFUELS LTD"
         type: "Generator Commercial"
-        status: " APPROVED"
+        status: "APPROVED"
+        address: "2 Stewart Street Milngavie GLASGOW G62 6BW Scotland"
+        contact: OrganisationContact(
+            name="Catherine Smith",
+            email="catherine@asaw.co.uk"
+        )
     """
 
     organisation_id: str  # Unique identifier, e.g., "GEN0213742"
     name: str  # Organisation/company name
     type: str  # Organisation type, e.g., "Generator Commercial"
-    status: str  # Account status, e.g., " APPROVED"
-    address: OrganisationAddress  # Registered address details
+    status: str  # Account status, e.g., "APPROVED"
+    address: str  # Full registered address (street, city, postcode, country)
     contact: OrganisationContact  # Primary contact information
-    tabs: list[OrganisationTab]  # Available navigation tabs for this organisation
 
 
 @dataclass
