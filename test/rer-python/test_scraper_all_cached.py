@@ -11,14 +11,14 @@ Features:
 - ✅ dry_run mode enabled (no SmartSuite writes)
 
 Usage:
-    # Run with full logging output
+    # Run with dry_run=True (default, no SmartSuite writes)
     uv run pytest test/rer-python/test_scraper_all_cached.py -v -s
+
+    # Run with dry_run=False (real SmartSuite writes)
+    uv run pytest test/rer-python/test_scraper_all_cached.py -v -s --no-dry-run
 
     # Run with specific log level
     uv run pytest test/rer-python/test_scraper_all_cached.py -v --log-cli-level=INFO
-
-    # Run single organisation test
-    uv run pytest test/rer-python/test_scraper_all_cached.py::test_scrape_all_organisations -v -s
 
 Requirements:
     - Cached HTML files in test/rer-html/snapshots/latest/
@@ -67,11 +67,11 @@ def cached_wrapper():
 
 
 @pytest.fixture
-def real_smartsuite():
-    """Create REAL RERSmartSuiteClient with NO mocking.
+def smartsuite():
+    """Create RERSmartSuiteClient.
 
-    This uses the actual RERSmartSuiteClient class with all real methods.
-    Only get_operations() is mocked to return test data.
+    Create a modified RERSmartSuiteClient instance for testing.
+    get_operations() is mocked to return test data.
 
     To prevent actual writes during testing:
     - Use dry_run=True in RERScraperService (default in these tests)
@@ -127,11 +127,12 @@ class TestScraperAllCachedData:
 
     def test_scrape_all_organisations(
         self,
-        real_smartsuite,
+        smartsuite,
         mock_session_auth,
         mock_retry_invoker,
         cached_rer_client,
         caplog,
+        dry_run_mode,
     ):
         """
         Test scraping ALL cached organisations.
@@ -153,15 +154,15 @@ class TestScraperAllCachedData:
         logger.info("Starting full scrape of ALL cached organisations")
         logger.info("=" * 80)
 
-        # Create service with dry_run=True
+        # Create service using dry_run_mode fixture from command line
         # Use cached_rer_client (which is the CachedRERWrapper) as the wrapper factory
         service = RERScraperService(
-            smartsuite=real_smartsuite,
+            smartsuite=smartsuite,
             session_auth=mock_session_auth,
             retry_invoker=mock_retry_invoker,
             function_name="test-scraper",
             wrapper_factory=lambda cookies: cached_rer_client,
-            dry_run=True,
+            dry_run=dry_run_mode,
         )
 
         logger.info(f"RERScraperService created (dry_run={service.dry_run})")
@@ -188,7 +189,7 @@ class TestScraperAllCachedData:
 
     def test_individual_organisation_scrape(
         self,
-        real_smartsuite,
+        smartsuite,
         mock_session_auth,
         mock_retry_invoker,
         cached_rer_client,
@@ -218,7 +219,7 @@ class TestScraperAllCachedData:
 
             # Create service for this organisation
             service = RERScraperService(
-                smartsuite=real_smartsuite,
+                smartsuite=smartsuite,
                 session_auth=mock_session_auth,
                 retry_invoker=mock_retry_invoker,
                 function_name="test-scraper",
@@ -227,7 +228,7 @@ class TestScraperAllCachedData:
             )
 
             # Mock SmartSuite operations to return just refresh_data
-            real_smartsuite.get_operations = Mock(return_value=["refresh_data"])
+            smartsuite.get_operations = Mock(return_value=["refresh_data"])
 
             try:
                 status_code, result = service.run()
