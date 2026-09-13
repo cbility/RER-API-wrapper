@@ -154,7 +154,9 @@ class RERScraperService:
             rer.get_organisation_certificates(organisation.organisation_id)
             for organisation in organisations
         ]
-        logger.info(f"Fetched certificates for {len(organisation_certificates)} organisations")
+        logger.info(
+            f"Fetched certificates for {len(organisation_certificates)} organisations"
+        )
         logger.debug(f"Certificates: {organisation_certificates}")
 
         return organisations, organisation_stations, organisation_certificates
@@ -258,7 +260,7 @@ class RERScraperService:
             self.smartsuite.update_organisations(update_orgs)
             self.smartsuite.create_organisations(insert_orgs)
         else:
-            logger.info("Dry run mode: skipping SmartSuite writes")
+            logger.warning("Dry run mode: skipping SmartSuite writes")
 
         # map RER fields onto smartsuite fields
 
