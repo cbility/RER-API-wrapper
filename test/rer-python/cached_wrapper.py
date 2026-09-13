@@ -1,24 +1,25 @@
-"""Cached RER wrapper for offline testing.
+"""Cached RER client for offline testing.
 
-This module provides a CachedRERWrapper class that serves cached HTML responses
-from disk instead of making live requests to the RER portal. Use this in tests
-to avoid depending on the RER portal being available.
+This module provides a CachedRERClient class that inherits from RERClient
+and serves cached HTML responses from disk instead of making live requests
+to the RER portal. Use this client in tests to avoid depending on the RER portal
+being available.
 
 The cache is organized by endpoint:
     test/rer-html/snapshots/latest/
-        User/response.html
-        Organisations/ORG123/Stations/response.html
+        _user/_user/response.html
+        GEN0212976/_organisation/response.html
+        GEN0212976/_stations/response.html
         etc.
 
 Usage:
     # In tests
-    from test.rer-python.cached_wrapper import CachedRERWrapper, FIXTURES_DIR
+    from test.rer-python.cached_wrapper import CachedRERClient, FIXTURES_DIR
 
-    rer = CachedRERWrapper(FIXTURES_DIR)
+    rer = CachedRERClient(FIXTURES_DIR)
     orgs = rer.get_user_organisations()  # Loads from cache
 """
 
-import re
 from pathlib import Path
 from typing import Any
 import requests
@@ -29,22 +30,22 @@ FIXTURES_DIR = Path(__file__).parent.parent / "rer-html" / "snapshots" / "latest
 """Default location for cached HTML fixtures."""
 
 
-class CachedRERWrapper:
+class CachedRERClient(RERClient):
     """
-    Test wrapper that serves cached HTML responses instead of making live requests.
+    Test client that serves cached HTML responses instead of making live requests.
 
-    Use this in tests to avoid depending on the RER portal being available.
+    Inherits all methods from RERClient, only overriding _request and authenticate.
     Fails with a clear error if a cached response is not found.
 
     Example:
-        >>> from test.rer-python.cached_wrapper import CachedRERWrapper, FIXTURES_DIR
-        >>> rer = CachedRERWrapper(FIXTURES_DIR)
+        >>> from test.rer-python.cached_wrapper import CachedRERClient, FIXTURES_DIR
+        >>> rer = CachedRERClient(FIXTURES_DIR)
         >>> orgs = rer.get_user_organisations()  # Loads from cache
     """
 
     def __init__(self, cache_dir: Path | None = None, auth_cookies: dict | None = None):
         """
-        Initialize cached wrapper.
+        Initialize cached client.
 
         Args:
             cache_dir: Directory containing cached HTML files. Defaults to FIXTURES_DIR.
@@ -52,6 +53,12 @@ class CachedRERWrapper:
         """
         self.cache_dir = cache_dir or FIXTURES_DIR
         self._auth_cookies = auth_cookies  # Kept for compatibility
+        # Skip authentication - just initialize the session attribute
+        self.session = requests.Session()
+
+    def authenticate(self, auth_cookies: dict, headers: dict | None = None) -> None:
+        """No-op for cached client - authentication not needed."""
+        pass
 
     def _get_cache_path(self, endpoint: str, params: dict | None = None) -> Path:
         """
@@ -59,9 +66,9 @@ class CachedRERWrapper:
 
         The cache uses underscore-prefixed directory names to match the fetch scripts.
         For example:
-            "User" -> "_user/_user/response.html"
-            "Organisations/ORG123/OrganisationReview" -> "GEN0212976/_organisation/response.html"
-            "Organisations/ORG123/Stations" -> "GEN0212976/_stations/response.html"
+            "User" -> "_user/_user"
+            "Organisations/ORG123/OrganisationReview" -> "GEN0212976/_organisation"
+            "Organisations/ORG123/Stations" -> "GEN0212976/_stations"
 
         Args:
             endpoint: The API endpoint (e.g., "User", "Organisations/ORG123/Stations")
@@ -132,7 +139,7 @@ class CachedRERWrapper:
         self, endpoint: str, method: str = "GET", **kwargs: Any
     ) -> requests.Response:
         """
-        Load cached HTML response from disk.
+        Load cached HTML response from disk. Override _request in RERClient.
 
         Args:
             endpoint: The API endpoint to request
@@ -167,239 +174,22 @@ class CachedRERWrapper:
         response.url = f"https://rer.ofgem.gov.uk/{cache_path.parent.name}"
         return response
 
-    def get_user(self):
-        """GET /User - Returns user dashboard with stats and organisation list."""
-        from rer_api_wrapper import parsing as rer_parsing
-
-        response = self._request("User")
-        return rer_parsing._parse_user(response.text)
-
-    def get_user_organisations(
-        self,
-        sort_field: str | None = None,
-        sort_direction: str | None = None,
-    ):
-        """GET /User - Returns all organisations for the authenticated user across all pages."""
-        import math
-        from rer_api_wrapper import parsing as rer_parsing
-        from selectolax.parser import HTMLParser
-
-        params: dict = {"pageNumber": 1}
-        if sort_field:
-            params["sortField"] = sort_field
-        if sort_direction:
-            params["sortDirection"] = sort_direction
-
-        response = self._request("User", params=params)
-        first_html = response.text
-
-        # Determine total pages from pagination results summary
-        tree = HTMLParser(first_html)
-        total_pages = 1
-        results_el = tree.css_first(".moj-pagination__results")
-        if results_el:
-            m = re.search(
-                r"Showing\s+(\d+)\s+to\s+(\d+)\s+of\s+(\d+)",
-                results_el.text(strip=True),
-            )
-            if m:
-                start, end, total = int(m.group(1)), int(m.group(2)), int(m.group(3))
-                page_size = end - start + 1
-                total_pages = math.ceil(total / page_size)
-
-        pages = [first_html]
-        for page_num in range(2, total_pages + 1):
-            params["pageNumber"] = page_num
-            pages.append(self._request("User", params=params).text)
-
-        return rer_parsing._parse_user_organisations(pages)
-
-    def get_organisation(self, organisation_id: str):
-        """GET /Organisations/OrganisationReview/{organisationId} - Returns organisation details."""
-        from rer_api_wrapper import parsing as rer_parsing
-
-        response = self._request(f"Organisations/OrganisationReview/{organisation_id}")
-        return rer_parsing._parse_organisation(response.text)
-
-    def get_organisation_stations(self, organisation_id: str):
-        """GET /Organisations/{organisationId}/Stations - Returns list of stations for the organisation."""
-        from rer_api_wrapper import parsing as rer_parsing
-
-        response = self._request(f"Organisations/{organisation_id}/Stations")
-        return rer_parsing._parse_organisation_stations(response.text, organisation_id)
-
-    def get_organisation_certificates(self, organisation_id: str):
-        """GET /Organisations/{organisationId}/Certificates - Returns certificates overview."""
-        from rer_api_wrapper import parsing as rer_parsing
-
-        response = self._request(f"Organisations/{organisation_id}/Certificates")
-        return rer_parsing._parse_certificates_overview(response.text, organisation_id)
-
-    def get_station(self, station_id: str):
-        """GET /Organisations/Stations/{stationId} - Returns full station detail.
-
-        Note: This searches all cached organisations for the station.
-        """
-        from rer_api_wrapper import parsing as rer_parsing
-
-        # Search all organisations for this station
-        for org_dir in self.cache_dir.iterdir():
-            if not org_dir.is_dir() or not org_dir.name.startswith("GEN"):
-                continue
-            cache_path = org_dir / f"_stations_{station_id}" / "response.html"
-            if cache_path.exists():
-                response = self._load_cache_file(cache_path)
-                return rer_parsing._parse_station(response.text, station_id)
-
-        raise FileNotFoundError(
-            f"Cached station not found for {station_id}. "
-            f"Searched in {self.cache_dir}"
-        )
-
-    def get_organisation_output_data_tasks(
-        self,
-        organisation_id: str,
-        statuses: list[str] | None = None,
-        sort_field: str | None = None,
-        sort_direction: str | None = None,
-        page_number: int = 1,
-    ):
-        """GET /Organisations/{organisationId}/Tasks/OutputData - Returns output data tasks."""
-        from rer_api_wrapper import parsing as rer_parsing
-
-        params: dict = {"pageNumber": page_number}
-        if statuses:
-            params["Statuses"] = statuses
-        if sort_field:
-            params["sortField"] = sort_field
-        if sort_direction:
-            params["sortDirection"] = sort_direction
-        response = self._request(
-            f"Organisations/{organisation_id}/Tasks/OutputData", params=params
-        )
-        return rer_parsing._parse_output_data_tasks(response.text, organisation_id)
-
-    def get_organisation_station_declaration_tasks(
-        self,
-        organisation_id: str,
-        sort_field: str | None = None,
-        sort_direction: str | None = None,
-        page_number: int = 1,
-    ):
-        """GET /Organisations/{organisationId}/Tasks/StationDeclarations - Returns station declaration tasks."""
-        from rer_api_wrapper import parsing as rer_parsing
-
-        params: dict = {"pageNumber": page_number}
-        if sort_field:
-            params["sortField"] = sort_field
-        if sort_direction:
-            params["sortDirection"] = sort_direction
-        response = self._request(
-            f"Organisations/{organisation_id}/Tasks/StationDeclarations", params=params
-        )
-        return rer_parsing._parse_station_declaration_tasks(
-            response.text, organisation_id
-        )
-
-    def get_organisation_station_declarations(self, organisation_id: str):
-        """GET /Organisations/{organisationId}/StationDeclarations - Returns station declarations."""
-        from rer_api_wrapper import parsing as rer_parsing
-
-        response = self._request(f"Organisations/{organisation_id}/StationDeclarations")
-        return rer_parsing._parse_station_declarations(response.text, organisation_id)
-
-    def find_transfer_organisation(
-        self,
-        organisation_id: str,
-        recipient_reference: str,
-        cert_type: str = "REGO",
-    ):
-        """POST /Organisations/{organisationId}/Certificates/{certType}/FindOrganisation"""
-        from rer_api_wrapper import parsing as rer_parsing
-
-        # For POST requests, we'll need to handle the cache differently
-        # For now, just use a simple endpoint mapping
-        endpoint = (
-            f"Organisations/{organisation_id}/Certificates/{cert_type}/FindOrganisation"
-        )
-        try:
-            response = self._request(endpoint)
-        except FileNotFoundError:
-            raise FileNotFoundError(
-                f"Cached response not found for find_transfer_organisation: {endpoint}. "
-                f"Expected at: {self._get_cache_path(endpoint)}. "
-                f"Run 'uv run python test/rer-html/fetch_all_snapshots.py' to update cache."
-            )
-        return rer_parsing._parse_find_organisation(response.text)
-
-    def select_certificates(
-        self,
-        organisation_id: str,
-        cert_type: str,
-        station_name: str,
-        start_period: str,
-        end_period: str,
-    ):
-        """POST /Organisations/{organisationId}/Certificates/{certType}/Select"""
-        # This is a POST request that modifies state - in cache mode, just succeed silently
-        # or raise NotImplementedError if you want to prevent this in tests
-        pass
-
-    def get_organisation_certificates_breakdown(
-        self,
-        organisation_id: str,
-        cert_type: str,
-    ):
-        """GET /Organisations/{organisationId}/Certificates/{certType}/Breakdown"""
-        from rer_api_wrapper import parsing as rer_parsing
-
-        response = self._request(
-            f"Organisations/{organisation_id}/Certificates/{cert_type}/Breakdown"
-        )
-        return rer_parsing._parse_certificate_breakdown(
-            response.text, organisation_id, cert_type
-        )
-
-    def get_organisation_certificates_history(
-        self,
-        organisation_id: str,
-        cert_type: str,
-        from_date: str | None = None,
-        to_date: str | None = None,
-        page_number: int = 1,
-    ):
-        """GET /Organisations/{organisationId}/Certificates/{certType}/History"""
-        from rer_api_wrapper import parsing as rer_parsing
-
-        params: dict[str, object] = {"pageNumber": page_number}
-        if from_date:
-            params["fromDate"] = from_date
-        if to_date:
-            params["toDate"] = to_date
-        response = self._request(
-            f"Organisations/{organisation_id}/Certificates/{cert_type}/History",
-            params=params,
-        )
-        return rer_parsing._parse_certificate_history(
-            response.text, organisation_id, cert_type
-        )
-
 
 def create_cached_wrapper(
     cache_dir: Path | None = None,
     auth_cookies: dict | None = None,
-) -> CachedRERWrapper:
+) -> CachedRERClient:
     """
-    Factory function to create a CachedRERWrapper instance.
+    Factory function to create a CachedRERClient instance.
 
-    This is the preferred way to create a cached wrapper for use with wrapper_factory.
+    This is the preferred way to create a cached client for use with wrapper_factory.
 
     Args:
         cache_dir: Directory containing cached HTML files. Defaults to FIXTURES_DIR.
         auth_cookies: Ignored (kept for API compatibility).
 
     Returns:
-        CachedRERWrapper instance
+        CachedRERClient instance
 
     Example:
         >>> service = RERScraperService(
@@ -407,4 +197,4 @@ def create_cached_wrapper(
         ...     wrapper_factory=lambda cookies: create_cached_wrapper(),
         ... )
     """
-    return CachedRERWrapper(cache_dir, auth_cookies)
+    return CachedRERClient(cache_dir, auth_cookies)
