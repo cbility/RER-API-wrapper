@@ -5,7 +5,7 @@ from dataclasses import asdict
 import pytest
 import re
 
-from rer_api_wrapper.models import StationDeclarationList
+from rer_client.models import StationDeclarationList
 
 YEAR_RE = re.compile(r"^\d{4}/\d{4}$")
 

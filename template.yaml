@@ -3,9 +3,9 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  rer-api-wrapper
+  rer-client
 
-  AWS lambda function for running https://github.com/cbility/RER-API-wrapper
+  AWS lambda function for running https://github.com/cbility/RER-client
 
 Parameters:
   REREmail:
@@ -157,14 +157,14 @@ Resources:
             Auth:
               ApiKeyRequired: true
 
-  RERWrapperApiUsagePlan:
+  RERClientApiUsagePlan:
     Type: AWS::ApiGateway::UsagePlan
     DependsOn:
-      - RERWrapperApiProdStage
+      - RERClientApiProdStage
     Properties:
-      UsagePlanName: RERWrapperUsagePlan
+      UsagePlanName: RERClientUsagePlan
       ApiStages:
-        - ApiId: !Ref RERWrapperApi
+        - ApiId: !Ref RERClientApi
           Stage: Prod
 
   RERSessionAuthApiUsagePlan:
@@ -187,17 +187,17 @@ Resources:
         - ApiId: !Ref RERScraperApi
           Stage: Prod
 
-  RERWrapperApiKeyOne:
+  RERClientApiKeyOne:
     Type: AWS::ApiGateway::ApiKey
     Properties:
       Enabled: true
-      Name: RERWrapperApiKeyOne
+      Name: RERClientApiKeyOne
 
-  RERWrapperApiKeyTwo:
+  RERClientApiKeyTwo:
     Type: AWS::ApiGateway::ApiKey
     Properties:
       Enabled: true
-      Name: RERWrapperApiKeyTwo
+      Name: RERClientApiKeyTwo
 
   RERSessionAuthApiKey:
     Type: AWS::ApiGateway::ApiKey
@@ -211,19 +211,19 @@ Resources:
       Enabled: true
       Name: RERScraperApiKey
 
-  RERWrapperUsagePlanKeyOne:
+  RERClientUsagePlanKeyOne:
     Type: AWS::ApiGateway::UsagePlanKey
     Properties:
-      KeyId: !Ref RERWrapperApiKeyOne
+      KeyId: !Ref RERClientApiKeyOne
       KeyType: API_KEY
-      UsagePlanId: !Ref RERWrapperApiUsagePlan
+      UsagePlanId: !Ref RERClientApiUsagePlan
 
-  RERWrapperUsagePlanKeyTwo:
+  RERClientUsagePlanKeyTwo:
     Type: AWS::ApiGateway::UsagePlanKey
     Properties:
-      KeyId: !Ref RERWrapperApiKeyTwo
+      KeyId: !Ref RERClientApiKeyTwo
       KeyType: API_KEY
-      UsagePlanId: !Ref RERWrapperApiUsagePlan
+      UsagePlanId: !Ref RERClientApiUsagePlan
 
   RERSessionAuthUsagePlanKey:
     Type: AWS::ApiGateway::UsagePlanKey
@@ -240,27 +240,27 @@ Resources:
       UsagePlanId: !Ref RERScraperApiUsagePlan
 
 Outputs:
-  RERWrapperApiUrl:
-    Description: "API Gateway endpoint URL for the RER wrapper"
-    Value: !Sub "https://${RERWrapperApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/"
+  RERClientApiUrl:
+    Description: "API Gateway endpoint URL for the RER client"
+    Value: !Sub "https://${RERClientApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/"
   RERSessionAuthApiUrl:
     Description: "API Gateway endpoint URL for the RER session auth proxy"
     Value: !Sub "https://${RERSessionAuthApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/"
   RERScraperApiUrl:
     Description: "API Gateway endpoint URL for the RER scraper"
     Value: !Sub "https://${RERScraperApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod/"
-  RERWrapperFunction:
-    Description: "RER wrapper Lambda Function ARN"
-    Value: !GetAtt RERWrapperFunction.Arn
+  RERClientFunction:
+    Description: "RER client Lambda Function ARN"
+    Value: !GetAtt RERClientFunction.Arn
   RERSessionAuthFunction:
     Description: "RER session auth Lambda Function ARN"
     Value: !GetAtt RERSessionAuthFunction.Arn
   RERScraperFunction:
     Description: "RER scraper Lambda Function ARN"
     Value: !GetAtt RERScraperFunction.Arn
-  RERWrapperFunctionIamRole:
-    Description: "Implicit IAM Role created for RER wrapper"
-    Value: !GetAtt RERWrapperFunctionRole.Arn
+  RERClientFunctionIamRole:
+    Description: "Implicit IAM Role created for RER client"
+    Value: !GetAtt RERClientFunctionRole.Arn
   RERSessionAuthFunctionIamRole:
     Description: "Implicit IAM Role created for RER session auth proxy"
     Value: !GetAtt RERSessionAuthFunctionRole.Arn

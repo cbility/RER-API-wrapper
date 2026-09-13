@@ -51,7 +51,7 @@ PY
 
 region="${AWS_REGION:-${AWS_DEFAULT_REGION:-eu-west-2}}"
 function_name="$(aws cloudformation describe-stack-resource \
-  --stack-name rer-api-wrapper \
+  --stack-name RER-client \
   --logical-resource-id RERSessionAuthFunction \
   --region "$region" \
   --query 'StackResourceDetail.PhysicalResourceId' \

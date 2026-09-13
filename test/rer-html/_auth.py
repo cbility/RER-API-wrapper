@@ -4,7 +4,7 @@ import os
 import json
 import logging
 
-from rer_api_wrapper import RERClient
+from rer_client import RERClient
 
 logging.basicConfig(level=logging.INFO)
 
@@ -26,8 +26,8 @@ def save_cookies(cookies: dict, cookies_file: str = COOKIES_FILE) -> None:
         json.dump(cookies, f, indent=2)
 
 
-def get_wrapper() -> RERClient:
+def get_client() -> RERClient:
     cookies = load_cookies()
-    wrapper = RERClient(auth_cookies=cookies)
-    save_cookies(wrapper.get_cookies())
-    return wrapper
+    client = RERClient(auth_cookies=cookies)
+    save_cookies(client.get_cookies())
+    return client

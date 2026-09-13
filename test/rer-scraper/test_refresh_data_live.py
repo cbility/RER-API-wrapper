@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from rer_api_wrapper import RERClient
+from rer_client import RERClient
 from rer_scraper.models import ScraperOperations
 from rer_scraper.service import RERScraperService
 
@@ -30,7 +30,7 @@ class StubRetryInvoker:
 
 
 @pytest.fixture(scope="module")
-def wrapper() -> RERClient:
+def client() -> RERClient:
     if not COOKIES_FILE.exists():
         pytest.skip(f"RER cookie file not found: {COOKIES_FILE}")
     cookies = json.loads(COOKIES_FILE.read_text(encoding="utf-8"))
@@ -47,8 +47,8 @@ def scraper() -> RERScraperService:
     )
 
 
-def test_print_refresh_data(scraper: RERScraperService, wrapper: RERClient):
-    organisations, stations, certificates = scraper.get_current_data(wrapper)
+def test_print_refresh_data(scraper: RERScraperService, client: RERClient):
+    organisations, stations, certificates = scraper.get_current_data(client)
 
     print("Organisations:")
     print(json.dumps(organisations, default=asdict, indent=2))

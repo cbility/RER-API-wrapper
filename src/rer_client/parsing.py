@@ -1,7 +1,7 @@
 from typing import Optional
 import re
-from selectolax.parser import HTMLParser # for parsing HTML
-from rer_api_wrapper.models import (
+from selectolax.parser import HTMLParser  # for parsing HTML
+from rer_client.models import (
     CertificateBreakdown,
     CertificateBreakdownItem,
     CertificateHistory,
@@ -28,8 +28,8 @@ from rer_api_wrapper.models import (
     User,
 )
 
-
 # region parsers
+
 
 def _parse_user(html: str) -> User:
     tree = HTMLParser(html)
@@ -75,6 +75,7 @@ def _parse_user(html: str) -> User:
         active_organisations=active_organisations,
     )
 
+
 def _parse_user_organisations(pages: list[str]) -> list[OrganisationSummary]:
     organisations: list[OrganisationSummary] = []
     for html in pages:
@@ -90,15 +91,18 @@ def _parse_user_organisations(pages: list[str]) -> list[OrganisationSummary]:
                 if not href:
                     raise ValueError("Organisation link does not have href")
                 org_id = href.split("/Organisations/")[-1].split("/")[0]
-            organisations.append(OrganisationSummary(
-                organisation_id=org_id,
-                name=cells[0].text(strip=True),
-                type=cells[1].text(strip=True),
-                task_count=int(cells[2].text(strip=True) or 0),
-                status=cells[3].text(strip=True),
-                user_status=cells[4].text(strip=True),
-            ))
+            organisations.append(
+                OrganisationSummary(
+                    organisation_id=org_id,
+                    name=cells[0].text(strip=True),
+                    type=cells[1].text(strip=True),
+                    task_count=int(cells[2].text(strip=True) or 0),
+                    status=cells[3].text(strip=True),
+                    user_status=cells[4].text(strip=True),
+                )
+            )
     return organisations
+
 
 def _parse_organisation(html: str) -> OrganisationDetail:
     tree = HTMLParser(html)
@@ -142,6 +146,7 @@ def _parse_organisation(html: str) -> OrganisationDetail:
         tabs=tabs,
     )
 
+
 def _parse_output_data_tasks(html: str, organisation_id: str) -> OutputDataTaskList:
     tree = HTMLParser(html)
     tasks: list[OutputDataTask] = []
@@ -161,17 +166,22 @@ def _parse_output_data_tasks(html: str, organisation_id: str) -> OutputDataTaskL
         if output_idx is not None and output_idx + 1 < len(url_parts):
             task_id = url_parts[output_idx + 1].split("?")[0]
 
-        tasks.append(OutputDataTask(
-            task_id=task_id,
-            period=cells[0].text(strip=True),
-            station_name=cells[1].text(strip=True),
-            status=cells[3].text(strip=True),
-            url=url,
-        ))
+        tasks.append(
+            OutputDataTask(
+                task_id=task_id,
+                period=cells[0].text(strip=True),
+                station_name=cells[1].text(strip=True),
+                status=cells[3].text(strip=True),
+                url=url,
+            )
+        )
 
     return OutputDataTaskList(organisation_id=organisation_id, tasks=tasks)
 
-def _parse_station_declaration_tasks(html: str, organisation_id: str) -> StationDeclarationTaskList:
+
+def _parse_station_declaration_tasks(
+    html: str, organisation_id: str
+) -> StationDeclarationTaskList:
     tree = HTMLParser(html)
     tasks: list[StationDeclarationTask] = []
 
@@ -183,15 +193,20 @@ def _parse_station_declaration_tasks(html: str, organisation_id: str) -> Station
         url = link.attrs.get("href", "") if link else ""
         if not url:
             raise ValueError("Station declaration task link does not have href")
-        tasks.append(StationDeclarationTask(
-            declaration_type=cells[0].text(strip=True),
-            year=cells[1].text(strip=True),
-            url=url,
-        ))
+        tasks.append(
+            StationDeclarationTask(
+                declaration_type=cells[0].text(strip=True),
+                year=cells[1].text(strip=True),
+                url=url,
+            )
+        )
 
     return StationDeclarationTaskList(organisation_id=organisation_id, tasks=tasks)
 
-def _parse_station_declarations(html: str, organisation_id: str) -> StationDeclarationList:
+
+def _parse_station_declarations(
+    html: str, organisation_id: str
+) -> StationDeclarationList:
     tree = HTMLParser(html)
     declarations: list[StationDeclaration] = []
 
@@ -203,16 +218,23 @@ def _parse_station_declarations(html: str, organisation_id: str) -> StationDecla
         url = link.attrs.get("href", "") if link else ""
         if not url:
             raise ValueError("Station declaration link does not have href")
-        declarations.append(StationDeclaration(
-            declaration_type=cells[0].text(strip=True),
-            period=cells[1].text(strip=True),
-            status=cells[2].text(strip=True),
-            url=url,
-        ))
+        declarations.append(
+            StationDeclaration(
+                declaration_type=cells[0].text(strip=True),
+                period=cells[1].text(strip=True),
+                status=cells[2].text(strip=True),
+                url=url,
+            )
+        )
 
-    return StationDeclarationList(organisation_id=organisation_id, declarations=declarations)
+    return StationDeclarationList(
+        organisation_id=organisation_id, declarations=declarations
+    )
 
-def _parse_organisation_stations(html: str, organisation_id: str) -> list[OrganisationStation]:
+
+def _parse_organisation_stations(
+    html: str, organisation_id: str
+) -> list[OrganisationStation]:
     tree = HTMLParser(html)
     stations: list[OrganisationStation] = []
 
@@ -234,19 +256,22 @@ def _parse_organisation_stations(html: str, organisation_id: str) -> list[Organi
             if scheme == "ROOFIT":
                 scheme = "ROO-FIT"
             scheme_statuses.append(StationSchemeStatus(scheme=scheme, status=status))
-        stations.append(OrganisationStation(
-            station_id=station_id,
-            station_name=cells[1].text(strip=True),
-            organisation_id=organisation_id,
-            organisation_name=cells[0].text(strip=True),
-            country=cells[3].text(strip=True),
-            technology_group=cells[4].text(strip=True),
-            scheme_statuses=scheme_statuses,
-            last_updated=cells[6].text(strip=True),
-            url=url,
-        ))
+        stations.append(
+            OrganisationStation(
+                station_id=station_id,
+                station_name=cells[1].text(strip=True),
+                organisation_id=organisation_id,
+                organisation_name=cells[0].text(strip=True),
+                country=cells[3].text(strip=True),
+                technology_group=cells[4].text(strip=True),
+                scheme_statuses=scheme_statuses,
+                last_updated=cells[6].text(strip=True),
+                url=url,
+            )
+        )
 
     return stations
+
 
 def _parse_station(html: str, station_id: str) -> StationDetail:
     tree = HTMLParser(html)
@@ -255,7 +280,9 @@ def _parse_station(html: str, station_id: str) -> StationDetail:
     h1 = tree.css_first("h1")
     spans = h1.css("span") if h1 else []
     captions = [s for s in spans if "govuk-caption-l" in (s.attrs.get("class") or "")]
-    non_captions = [s for s in spans if "govuk-caption-l" not in (s.attrs.get("class") or "")]
+    non_captions = [
+        s for s in spans if "govuk-caption-l" not in (s.attrs.get("class") or "")
+    ]
     organisation_name = captions[0].text(strip=True) if len(captions) > 0 else ""
     station_name = non_captions[0].text(strip=True) if non_captions else ""
     subtitle = captions[1].text(strip=True) if len(captions) > 1 else ""
@@ -274,13 +301,15 @@ def _parse_station(html: str, station_id: str) -> StationDetail:
         for row in tables[0].css("tr")[1:]:
             cells = row.css("td")
             if len(cells) >= 5:
-                scheme_accreditations.append(SchemeAccreditation(
-                    scheme=cells[0].text(strip=True),
-                    accreditation_reference=cells[1].text(strip=True),
-                    application_date=cells[2].text(strip=True),
-                    effective_from=cells[3].text(strip=True),
-                    status=cells[4].text(strip=True),
-                ))
+                scheme_accreditations.append(
+                    SchemeAccreditation(
+                        scheme=cells[0].text(strip=True),
+                        accreditation_reference=cells[1].text(strip=True),
+                        application_date=cells[2].text(strip=True),
+                        effective_from=cells[3].text(strip=True),
+                        status=cells[4].text(strip=True),
+                    )
+                )
 
     # Station layout capacities table (TABLE 1)
     station_capacities: list[StationCapacity] = []
@@ -288,13 +317,15 @@ def _parse_station(html: str, station_id: str) -> StationDetail:
         for row in tables[1].css("tr")[1:]:
             cells = row.css("td")
             if len(cells) >= 5:
-                station_capacities.append(StationCapacity(
-                    capacity_type=cells[0].text(strip=True),
-                    commissioning_date=cells[1].text(strip=True),
-                    date_added=cells[2].text(strip=True),
-                    tic=cells[3].text(strip=True),
-                    dnc=cells[4].text(strip=True),
-                ))
+                station_capacities.append(
+                    StationCapacity(
+                        capacity_type=cells[0].text(strip=True),
+                        commissioning_date=cells[1].text(strip=True),
+                        date_added=cells[2].text(strip=True),
+                        tic=cells[3].text(strip=True),
+                        dnc=cells[4].text(strip=True),
+                    )
+                )
 
     return StationDetail(
         station_id=station_id,
@@ -311,7 +342,9 @@ def _parse_station(html: str, station_id: str) -> StationDetail:
         declared_net_capacity=info.get("Declared net capacity", ""),
         roofit_technology=info.get("ROO-FIT technology", ""),
         rego_technology=info.get("REGO technology", ""),
-        connected_to_network=info.get("Connected to transmission/distribution network", ""),
+        connected_to_network=info.get(
+            "Connected to transmission/distribution network", ""
+        ),
         will_export=info.get("Will export renewable generation", ""),
         export_connection_capacity=info.get("Export connection capacity", ""),
         station_description=info.get("Station description", ""),
@@ -323,6 +356,7 @@ def _parse_station(html: str, station_id: str) -> StationDetail:
         scheme_accreditations=scheme_accreditations,
         station_capacities=station_capacities,
     )
+
 
 def _parse_find_organisation(html: str) -> Optional[OrganisationSearchResult]:
     """Returns the matched organisation, or None if no match was found."""
@@ -342,7 +376,10 @@ def _parse_find_organisation(html: str) -> Optional[OrganisationSearchResult]:
         return None
     return OrganisationSearchResult(reference=reference, name=name)
 
-def _parse_certificates_overview(html: str, organisation_id: str) -> CertificatesOverview:
+
+def _parse_certificates_overview(
+    html: str, organisation_id: str
+) -> CertificatesOverview:
     tree = HTMLParser(html)
 
     desc_el = tree.css_first(".ofgem-rer-stat__description")
@@ -364,7 +401,9 @@ def _parse_certificates_overview(html: str, organisation_id: str) -> Certificate
         figure_el = stat_el.css_first(".ofgem-rer-stat__figure")
         h2.decompose()
         try:
-            issued = int(figure_el.text(strip=True).replace(",", "")) if figure_el else 0
+            issued = (
+                int(figure_el.text(strip=True).replace(",", "")) if figure_el else 0
+            )
         except ValueError:
             issued = 0
 
@@ -387,17 +426,26 @@ def _parse_certificates_overview(html: str, organisation_id: str) -> Certificate
         if not history_url:
             raise ValueError("Certificate history link does not have href")
 
-        summaries.append(CertificateTypeSummary(
-            cert_type=cert_type,
-            issued=issued,
-            balance=balance,
-            breakdown_url=breakdown_url,
-            history_url=history_url,
-        ))
+        summaries.append(
+            CertificateTypeSummary(
+                cert_type=cert_type,
+                issued=issued,
+                balance=balance,
+                breakdown_url=breakdown_url,
+                history_url=history_url,
+            )
+        )
 
-    return CertificatesOverview(organisation_id=organisation_id, balance_period=balance_period, summaries=summaries)
+    return CertificatesOverview(
+        organisation_id=organisation_id,
+        balance_period=balance_period,
+        summaries=summaries,
+    )
 
-def _parse_certificate_breakdown(html: str, organisation_id: str, cert_type: str) -> CertificateBreakdown:
+
+def _parse_certificate_breakdown(
+    html: str, organisation_id: str, cert_type: str
+) -> CertificateBreakdown:
     tree = HTMLParser(html)
     items: list[CertificateBreakdownItem] = []
 
@@ -409,18 +457,25 @@ def _parse_certificate_breakdown(html: str, organisation_id: str, cert_type: str
             count = int(cells[5].text(strip=True).replace(",", ""))
         except ValueError:
             count = 0
-        items.append(CertificateBreakdownItem(
-            action=cells[0].text(strip=True),
-            country=cells[1].text(strip=True),
-            station=cells[2].text(strip=True),
-            technology=cells[3].text(strip=True),
-            output_period=cells[4].text(strip=True),
-            count=count,
-        ))
+        items.append(
+            CertificateBreakdownItem(
+                action=cells[0].text(strip=True),
+                country=cells[1].text(strip=True),
+                station=cells[2].text(strip=True),
+                technology=cells[3].text(strip=True),
+                output_period=cells[4].text(strip=True),
+                count=count,
+            )
+        )
 
-    return CertificateBreakdown(organisation_id=organisation_id, cert_type=cert_type, items=items)
+    return CertificateBreakdown(
+        organisation_id=organisation_id, cert_type=cert_type, items=items
+    )
 
-def _parse_certificate_history(html: str, organisation_id: str, cert_type: str) -> CertificateHistory:
+
+def _parse_certificate_history(
+    html: str, organisation_id: str, cert_type: str
+) -> CertificateHistory:
     tree = HTMLParser(html)
     months: list[CertificateHistoryMonth] = []
 
@@ -440,13 +495,18 @@ def _parse_certificate_history(html: str, organisation_id: str, cert_type: str) 
             transferred_out = int(cells[2].text(strip=True).replace(",", ""))
         except ValueError:
             transferred_out = 0
-        months.append(CertificateHistoryMonth(
-            month=cells[0].text(strip=True),
-            month_url=month_url,
-            transferred_in=transferred_in,
-            transferred_out=transferred_out,
-        ))
+        months.append(
+            CertificateHistoryMonth(
+                month=cells[0].text(strip=True),
+                month_url=month_url,
+                transferred_in=transferred_in,
+                transferred_out=transferred_out,
+            )
+        )
 
-    return CertificateHistory(organisation_id=organisation_id, cert_type=cert_type, months=months)
+    return CertificateHistory(
+        organisation_id=organisation_id, cert_type=cert_type, months=months
+    )
+
 
 # endregion parsers

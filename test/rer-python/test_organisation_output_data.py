@@ -5,7 +5,7 @@ from dataclasses import asdict
 import pytest
 import re
 
-from rer_api_wrapper.models import OutputDataTaskList
+from rer_client.models import OutputDataTaskList
 
 UUID_RE = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.I

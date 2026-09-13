@@ -104,7 +104,7 @@ class StubOrganisation:
     name: str = "Organisation"
 
 
-class StubWrapper:
+class StubClient:
     def __init__(self):
         self.select_arguments: tuple[object, ...] | None = None
 
@@ -128,14 +128,14 @@ class StubWrapper:
 
 
 def test_prepares_inclusive_transfer_range():
-    wrapper = StubWrapper()
+    client = StubClient()
     service = make_service([], {"session": "cached"}, StubRetryInvoker())
     transfer = TransferInstruction("STATION1", "GEN2", "Apr 2025", "Jun 2025")
 
-    result = service.prepare_transfer(wrapper, transfer)  # type: ignore[arg-type]
+    result = service.prepare_transfer(client, transfer)  # type: ignore[arg-type]
 
     assert result.selected is True
-    assert wrapper.select_arguments == (
+    assert client.select_arguments == (
         "GEN1",
         "REGO",
         "Wind Farm",
@@ -145,7 +145,7 @@ def test_prepares_inclusive_transfer_range():
 
 
 def test_treats_missing_certificate_ranges_as_successful_no_op():
-    class NoMatchWrapper(StubWrapper):
+    class NoMatchClient(StubClient):
         def select_certificates(self, *arguments: object) -> None:
             raise ValueError(
                 "No REGO certificate ranges match station 'Wind Farm' between 'Apr 2025' and 'Jun 2025'."
@@ -153,7 +153,7 @@ def test_treats_missing_certificate_ranges_as_successful_no_op():
 
     service = make_service([], {"session": "cached"}, StubRetryInvoker())
     result = service.prepare_transfer(
-        NoMatchWrapper(),  # type: ignore[arg-type]
+        NoMatchClient(),  # type: ignore[arg-type]
         TransferInstruction("STATION1", "GEN2", "Apr 2025", "Jun 2025"),
     )
 

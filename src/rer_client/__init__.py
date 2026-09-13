@@ -1,5 +1,5 @@
-from rer_api_wrapper.client import RERClient
-from rer_api_wrapper.models import (
+from rer_client.client import RERClient
+from rer_client.models import (
     RERRequest,
     User,
     OrganisationSummary,

@@ -4,7 +4,7 @@ import json
 from dataclasses import asdict
 import pytest
 
-from rer_api_wrapper.models import OrganisationDetail
+from rer_client.models import OrganisationDetail
 
 
 @pytest.fixture(scope="module")

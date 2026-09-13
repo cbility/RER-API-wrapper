@@ -4,7 +4,7 @@ import json
 from dataclasses import asdict
 import pytest
 
-from rer_api_wrapper.models import CertificatesOverview
+from rer_client.models import CertificatesOverview
 
 ORG_ID = "GEN0212970"  # Updated to match cached data
 

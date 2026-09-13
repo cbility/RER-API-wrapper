@@ -11,7 +11,7 @@ import json  # for saving cookies
 import re  # for pagination parsing
 import math  # for pagination calculation
 
-from rer_api_wrapper import parsing as rer_parsing
+from rer_client import parsing as rer_parsing
 
 # endregion imports
 
@@ -37,7 +37,7 @@ RER_DEFAULT_HEADERS = {
 
 
 class RERClient:
-    """Wrapper for making authenticated requests to the RER portal.
+    """Client for making authenticated requests to the RER portal.
 
     Params:
         auth_cookies: dict of cookies to use for authentication.

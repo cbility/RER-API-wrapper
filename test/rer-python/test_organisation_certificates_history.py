@@ -5,7 +5,7 @@ from dataclasses import asdict
 import pytest
 
 
-from rer_api_wrapper.models import CertificateHistory
+from rer_client.models import CertificateHistory
 
 ORG_ID = "GEN0212970"  # Updated to match cached data
 FROM_DATE = "05/01/2024 00:00:00 +01:00"

@@ -22,7 +22,7 @@ from datetime import datetime
 from pathlib import Path
 from dataclasses import asdict
 
-from _auth import get_wrapper
+from _auth import get_client
 from selectolax.parser import HTMLParser
 
 # Configure logging
@@ -77,11 +77,11 @@ def main():
     log.info(f"Output directory: {RUN_DIR}")
     log.info("")
 
-    # Get authenticated wrapper
+    # Get authenticated client
     log.info("Authenticating with RER...")
     try:
-        wrapper = get_wrapper()
-        user = wrapper.get_user()
+        client = get_client()
+        user = client.get_user()
         log.info(f"Authenticated as: {user.full_name} ({user.email})")
     except FileNotFoundError as e:
         log.error(f"✗ Authentication failed: {e}")
@@ -108,13 +108,13 @@ def main():
 
     # Get all organisations
     log.info("Fetching organisation list...")
-    organisations = wrapper.get_user_organisations()
+    organisations = client.get_user_organisations()
     log.info(f"Found {len(organisations)} organisation(s)")
     log.info("")
 
     # Save user dashboard
     log.info("Saving user dashboard...")
-    user_response = wrapper._request("User")
+    user_response = client._request("User")
     user_data = dataclass_to_dict(user)
     save_snapshot("_user", "/user", user_response.text, user_data)
     log.info("")
@@ -129,10 +129,8 @@ def main():
             # 1. Organisation details
             try:
                 log.info("  Fetching organisation details...")
-                response = wrapper._request(
-                    f"Organisations/OrganisationReview/{org_id}"
-                )
-                parsed = wrapper.get_organisation(org_id)
+                response = client._request(f"Organisations/OrganisationReview/{org_id}")
+                parsed = client.get_organisation(org_id)
                 save_snapshot(
                     org_id, "/organisation", response.text, dataclass_to_dict(parsed)
                 )
@@ -142,8 +140,8 @@ def main():
             # 2. Stations list
             try:
                 log.info("  Fetching stations...")
-                response = wrapper._request(f"Organisations/{org_id}/Stations")
-                parsed = wrapper.get_organisation_stations(org_id)
+                response = client._request(f"Organisations/{org_id}/Stations")
+                parsed = client.get_organisation_stations(org_id)
                 save_snapshot(
                     org_id, "/stations", response.text, dataclass_to_dict(parsed)
                 )
@@ -153,10 +151,10 @@ def main():
             # 3. Station declarations
             try:
                 log.info("  Fetching station declarations...")
-                response = wrapper._request(
+                response = client._request(
                     f"Organisations/{org_id}/StationDeclarations"
                 )
-                parsed = wrapper.get_organisation_station_declarations(org_id)
+                parsed = client.get_organisation_station_declarations(org_id)
                 save_snapshot(
                     org_id,
                     "/station-declarations",
@@ -169,8 +167,8 @@ def main():
             # 4. Certificates overview
             try:
                 log.info("  Fetching certificates overview...")
-                response = wrapper._request(f"Organisations/{org_id}/Certificates")
-                parsed = wrapper.get_organisation_certificates(org_id)
+                response = client._request(f"Organisations/{org_id}/Certificates")
+                parsed = client.get_organisation_certificates(org_id)
                 save_snapshot(
                     org_id, "/certificates", response.text, dataclass_to_dict(parsed)
                 )
@@ -180,8 +178,8 @@ def main():
             # 5. Output data tasks
             try:
                 log.info("  Fetching output data tasks...")
-                response = wrapper._request(f"Organisations/{org_id}/Tasks/OutputData")
-                parsed = wrapper.get_organisation_output_data_tasks(org_id)
+                response = client._request(f"Organisations/{org_id}/Tasks/OutputData")
+                parsed = client.get_organisation_output_data_tasks(org_id)
                 save_snapshot(
                     org_id,
                     "/tasks/output-data",
@@ -194,10 +192,10 @@ def main():
             # 6. Station declaration tasks
             try:
                 log.info("  Fetching station declaration tasks...")
-                response = wrapper._request(
+                response = client._request(
                     f"Organisations/{org_id}/Tasks/StationDeclarations"
                 )
-                parsed = wrapper.get_organisation_station_declaration_tasks(org_id)
+                parsed = client.get_organisation_station_declaration_tasks(org_id)
                 save_snapshot(
                     org_id,
                     "/tasks/station-declarations",
@@ -210,7 +208,7 @@ def main():
             # 7. Certificate breakdown (need to get cert types first)
             try:
                 log.info("  Fetching certificates for breakdown...")
-                certs_overview = wrapper.get_organisation_certificates(org_id)
+                certs_overview = client.get_organisation_certificates(org_id)
 
                 # Get unique certificate types
                 cert_types = set()
@@ -223,10 +221,10 @@ def main():
                 for cert_type in cert_types:
                     try:
                         log.info(f"    Fetching {cert_type} breakdown...")
-                        response = wrapper._request(
+                        response = client._request(
                             f"Organisations/{org_id}/Certificates/{cert_type}/Breakdown"
                         )
-                        parsed = wrapper.get_organisation_certificates_breakdown(
+                        parsed = client.get_organisation_certificates_breakdown(
                             org_id, cert_type
                         )
                         save_snapshot(
@@ -243,7 +241,7 @@ def main():
             # 8. Certificate history (need to get cert types first)
             try:
                 log.info("  Fetching certificates for history...")
-                certs_overview = wrapper.get_organisation_certificates(org_id)
+                certs_overview = client.get_organisation_certificates(org_id)
 
                 # Get unique certificate types
                 cert_types = set()
@@ -256,10 +254,10 @@ def main():
                 for cert_type in cert_types:
                     try:
                         log.info(f"    Fetching {cert_type} history...")
-                        response = wrapper._request(
+                        response = client._request(
                             f"Organisations/{org_id}/Certificates/{cert_type}/History"
                         )
-                        parsed = wrapper.get_organisation_certificates_history(
+                        parsed = client.get_organisation_certificates_history(
                             org_id, cert_type
                         )
                         save_snapshot(
@@ -281,7 +279,7 @@ def main():
                 )
                 # Use a known organisation reference to test the endpoint
                 test_reference = "GEN0212970"  # Use an organisation we know exists
-                response = wrapper._request(
+                response = client._request(
                     f"Organisations/{org_id}/Certificates/REGO/FindOrganisation"
                 )
                 # This is a POST endpoint that requires form data, but we can cache the GET response
@@ -297,7 +295,7 @@ def main():
 
             # 9. Individual station details (from stations list)
             try:
-                stations = wrapper.get_organisation_stations(org_id)
+                stations = client.get_organisation_stations(org_id)
                 for station in stations[
                     :5
                 ]:  # Limit to first 5 stations to avoid too many requests
@@ -305,8 +303,8 @@ def main():
                     log.info(
                         f"    Fetching station: {station.station_name} ({station_id})"
                     )
-                    response = wrapper._request(f"Organisations/Stations/{station_id}")
-                    parsed = wrapper.get_station(station_id)
+                    response = client._request(f"Organisations/Stations/{station_id}")
+                    parsed = client.get_station(station_id)
                     save_snapshot(
                         org_id,
                         f"/stations/{station_id}",

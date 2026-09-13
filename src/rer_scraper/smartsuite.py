@@ -11,7 +11,7 @@ from smartsuite_python import (
 from dataclasses import asdict
 from datetime import datetime
 
-from rer_api_wrapper.models import (
+from rer_client.models import (
     CertificatesOverview,
     OrganisationStation,
     OrganisationSummary,

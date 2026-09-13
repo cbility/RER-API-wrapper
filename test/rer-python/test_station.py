@@ -4,7 +4,7 @@ import json
 from dataclasses import asdict
 import pytest
 
-from rer_api_wrapper.models import StationDetail
+from rer_client.models import StationDetail
 
 STATION_ID = "E7F48B1B-C6E3-44D6-87FE-5900C42B7229"  # Updated to match cached data from GEN0212970
 

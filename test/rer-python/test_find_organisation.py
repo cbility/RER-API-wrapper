@@ -4,7 +4,7 @@ import json
 from dataclasses import asdict
 import pytest
 
-from rer_api_wrapper.models import OrganisationSearchResult
+from rer_client.models import OrganisationSearchResult
 
 # Org performing the search
 SEARCHING_ORG_ID = "GEN0212976"

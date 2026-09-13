@@ -14,11 +14,11 @@ from pathlib import Path
 # Add test directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
 
-from cached_wrapper import CachedRERWrapper, FIXTURES_DIR
+from cached_rer_client import CachedRERClient, FIXTURES_DIR
 
 
-class TestWrapper:
-    """Test the cached wrapper itself."""
+class Testclient:
+    """Test the cached client itself."""
 
     def test_cache_dir_exists(self):
         """Verify the cache directory exists."""
@@ -27,17 +27,17 @@ class TestWrapper:
             f"Run 'uv run python test/rer-html/fetch_all_snapshots.py' to create fixtures."
         )
 
-    def test_wrapper_initialization(self):
-        """Test that CachedRERWrapper can be initialized."""
-        wrapper = CachedRERWrapper(FIXTURES_DIR)
-        assert wrapper.cache_dir == FIXTURES_DIR
+    def test_client_initialization(self):
+        """Test that CachedRERClient can be initialized."""
+        client = CachedRERClient(FIXTURES_DIR)
+        assert client.cache_dir == FIXTURES_DIR
 
-    def test_wrapper_rejects_missing_cache(self):
-        """Test that wrapper raises clear error when cache is missing."""
-        wrapper = CachedRERWrapper(Path("/nonexistent"))
+    def test_client_rejects_missing_cache(self):
+        """Test that client raises clear error when cache is missing."""
+        client = CachedRERClient(Path("/nonexistent"))
 
         with pytest.raises(FileNotFoundError) as exc_info:  # type: ignore[call-overload]
-            wrapper._request("User")
+            client._request("User")
 
         assert "Cached response not found" in str(exc_info.value)
         assert "fetch_all_snapshots.py" in str(exc_info.value)
@@ -128,10 +128,10 @@ class TestStationEndpoints:
 
 
 class TestWithScraperService:
-    """Test using wrapper with RERScraperService."""
+    """Test using client with RERScraperService."""
 
-    def test_service_with_wrapper(self, rer):
-        """Test that RERScraperService works with the wrapper."""
+    def test_service_with_client(self, rer):
+        """Test that RERScraperService works with the client."""
         import sys
 
         sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
@@ -166,13 +166,13 @@ class TestWithScraperService:
             def invoke(self, function_name, payload):  # type: ignore[no-untyped-def]
                 pass
 
-        # Create service with cached wrapper
+        # Create service with cached client
         service = RERScraperService(
             smartsuite=MockSmartSuite(),  # type: ignore[arg-type]
             session_auth=MockSessionAuth(),  # type: ignore[arg-type]
             retry_invoker=MockRetryInvoker(),  # type: ignore[arg-type]
             function_name="test-function",
-            wrapper_factory=lambda cookies: rer,
+            client_factory=lambda cookies: rer,
         )
 
         # Run the service - may fail if parsing has issues, that's expected
@@ -181,5 +181,5 @@ class TestWithScraperService:
             assert status_code == 200
         except Exception:
             # Service-level tests may fail due to parsing differences
-            # The important thing is the wrapper loads cached HTML
-            pytest.skip("Service integration test skipped - focus on wrapper tests")
+            # The important thing is the client loads cached HTML
+            pytest.skip("Service integration test skipped - focus on client tests")

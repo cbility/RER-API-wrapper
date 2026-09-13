@@ -1,6 +1,6 @@
 # Session Auth API
 
-This API returns authenticated RER cookies for use with the separate wrapper API.
+This API returns authenticated RER cookies for use with the separate client API.
 
 ## What It Does
 
@@ -12,7 +12,7 @@ For each request, the session-auth Lambda:
 4. otherwise starts the RER login and MFA flow asynchronously and returns `202 Accepted`
 5. stores refreshed cookies back in SmartSuite
 
-The client retrieves cookies here, then sends them to the wrapper API.
+The client retrieves cookies here, then sends them to the client API.
 
 ## Base URL
 
@@ -37,7 +37,7 @@ Example:
 x-api-key: YOUR_SESSION_AUTH_API_KEY
 ```
 
-This is the separate API key for the session-auth API, not the wrapper API key.
+This is the separate API key for the session-auth API, not the client API key.
 
 ## Examples
 
@@ -53,7 +53,7 @@ You can also pass `recipientReference` as a query parameter, but JSON body input
 
 ## Response Behavior
 
-- `200 OK`: `{"cookies": {"name": "value"}}`; send these cookies to the wrapper API.
+- `200 OK`: `{"cookies": {"name": "value"}}`; send these cookies to the client API.
 - `202 Accepted`: `{"status": "refreshing"}`; retry after the background refresh completes.
 
 ## Operational Notes

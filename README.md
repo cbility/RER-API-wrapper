@@ -1,4 +1,4 @@
-# RER API Wrapper
+# RER client
 
 Python package for wrapping the Ofgem Renewable Electricity Register (RER) portal. The RER site returns HTML, so this package handles authenticated requests, parses the relevant pages, and returns typed Python objects.
 
@@ -19,7 +19,7 @@ uv sync
 Install from Git in another repo with:
 
 ```bash
-uv add git+https://github.com/ORG/RER-API-wrapper.git
+uv add git+https://github.com/ORG/RER-client.git
 ```
 
 ## Build and Deploy
@@ -69,7 +69,7 @@ To use the package you need authenticated RER cookies. The helper script at `tes
 ### Use the RERClient
 
 ```python
-from rer_api_wrapper import RERClient
+from rer_client import RERClient
 
 cookies = {"cookie-name": "cookie-value"}
 client = RERClient(auth_cookies=cookies)
@@ -113,9 +113,9 @@ See `test/rer-html/README.md` for more details on HTML snapshots.
 
 ### Lambda Handler Integration Tests
 
-#### API Wrapper Handler Tests
+#### client Handler Tests
 
-The `test/rer-python/test_lambda_handler.py` file contains integration tests for the **API Wrapper Lambda handler** using cached HTML. These tests exercise the full handler workflow without making live requests to the RER portal or writing to SmartSuite.
+The `test/rer-python/test_lambda_handler.py` file contains integration tests for the **client Lambda handler** using cached HTML. These tests exercise the full handler workflow without making live requests to the RER portal or writing to SmartSuite.
 
 #### Scraper Handler Tests
 
@@ -168,7 +168,7 @@ uv run pytest test/rer-python/test_scraper_all_cached.py::TestScraperAllCachedDa
 **Features:**
 - ✅ Real `RERScraperService` class (not mocked)
 - ✅ Real `RERSmartSuiteClient.map_organisation()` method
-- ✅ `CachedRERWrapper` for all RER API calls (uses cached HTML)
+- ✅ `CachedRERClient` for all RER API calls (uses cached HTML)
 - ✅ ALL cached organisations from `test/rer-html/snapshots/latest/`
 - ✅ Full logging output showing organisations to create/update
 - ✅ `dry_run` mode enabled by default (no SmartSuite writes)
@@ -273,7 +273,7 @@ The `RERClient` class provides direct access to RER portal data:
 ## Example: Get Organisation Data
 
 ```python
-from rer_api_wrapper import RERClient
+from rer_client import RERClient
 
 cookies = {"cookie-name": "cookie-value"}
 client = RERClient(auth_cookies=cookies)
@@ -304,16 +304,16 @@ certificates = client.get_organisation_certificates(org_id)
 
 ## Session Auth API
 
-Use the separate session-auth API to obtain RER cookies before calling the wrapper API.
+Use the separate session-auth API to obtain RER cookies before calling the client API.
 
 1. Get the deployed base URL from the CloudFormation output `RERSessionAuthApiUrl`.
 2. Get the API key value for `RERSessionAuthApiKey` from API Gateway.
 3. Call the session-auth API root. It returns `200` with cached cookies or `202` while refreshing them.
-4. Send returned cookies to the wrapper API.
+4. Send returned cookies to the client API.
 
 Notes:
 - A `202` response means refresh is running in the background; retry after a short delay.
-- The wrapper API is separate and requires its own API key.
+- The client API is separate and requires its own API key.
 
 Example:
 
@@ -327,5 +327,5 @@ More examples and supported routes are in [`docs/session-auth-api.md`](docs/sess
 
 ## Limitations
 
-- Subject to website changes breaking the wrapper
+- Subject to website changes breaking the client
 - This is an unofficial library with no support from Ofgem

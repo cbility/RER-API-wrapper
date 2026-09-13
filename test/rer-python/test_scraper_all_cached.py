@@ -5,7 +5,7 @@ to verify the full scraping and parsing logic works correctly.
 
 Features:
 - ✅ Real RERScraperService class (not mocked)
-- ✅ CachedRERWrapper for all RER API calls (uses cached HTML)
+- ✅ CachedRERClient for all RER API calls (uses cached HTML)
 - ✅ ALL cached organisations from test/rer-html/snapshots/latest/
 - ✅ Full logging output during test execution
 - ✅ dry_run mode enabled (no SmartSuite writes)
@@ -35,7 +35,7 @@ from datetime import datetime
 from rer_scraper.service import RERScraperService, SessionAuthClient
 from rer_scraper.smartsuite import RERSmartSuiteClient
 from rer_scraper.models import ScraperResult
-from cached_wrapper import CachedRERWrapper, FIXTURES_DIR
+from cached_rer_client import CachedRERClient, FIXTURES_DIR
 
 # Configure logging to show during tests
 logging.basicConfig(
@@ -52,10 +52,10 @@ logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 
 @pytest.fixture(scope="module")
-def cached_wrapper():
-    """Create cached wrapper with ALL available HTML."""
-    wrapper = CachedRERWrapper(FIXTURES_DIR)
-    logger.info(f"Cached wrapper initialized with fixtures from: {FIXTURES_DIR}")
+def cached_client():
+    """Create cached client with ALL available HTML."""
+    client = CachedRERClient(FIXTURES_DIR)
+    logger.info(f"Cached client initialized with fixtures from: {FIXTURES_DIR}")
 
     # Count available organisations (FIXTURES_DIR already points to 'latest')
     org_count = len(
@@ -63,7 +63,7 @@ def cached_wrapper():
     )
     logger.info(f"Found {org_count} cached organisations")
 
-    return wrapper
+    return client
 
 
 @pytest.fixture
@@ -115,11 +115,11 @@ def mock_retry_invoker():
 
 
 @pytest.fixture
-def cached_rer_client(cached_wrapper):
-    """Create RERClient that uses cached_wrapper internally."""
-    # Use the cached_wrapper directly - it already has all the RERClient methods
+def cached_rer_client(cached_client):
+    """Create RERClient that uses cached_client internally."""
+    # Use the cached_client directly - it already has all the RERClient methods
     # but serves from cache instead of making live requests
-    return cached_wrapper
+    return cached_client
 
 
 class TestScraperAllCachedData:
@@ -139,7 +139,7 @@ class TestScraperAllCachedData:
 
         This test:
         1. Creates a real RERScraperService instance
-        2. Uses CachedRERWrapper for all RER API calls (cached HTML)
+        2. Uses CachedRERClient for all RER API calls (cached HTML)
         3. Processes all available organisations
         4. Verifies no errors occur during parsing
         5. Confirms dry_run mode prevents SmartSuite writes
@@ -155,13 +155,13 @@ class TestScraperAllCachedData:
         logger.info("=" * 80)
 
         # Create service using dry_run_mode fixture from command line
-        # Use cached_rer_client (which is the CachedRERWrapper) as the wrapper factory
+        # Use cached_rer_client (which is the CachedRERClient) as the client factory
         service = RERScraperService(
             smartsuite=smartsuite,
             session_auth=mock_session_auth,
             retry_invoker=mock_retry_invoker,
             function_name="test-scraper",
-            wrapper_factory=lambda cookies: cached_rer_client,
+            client_factory=lambda cookies: cached_rer_client,
             dry_run=dry_run_mode,
         )
 
@@ -223,7 +223,7 @@ class TestScraperAllCachedData:
                 session_auth=mock_session_auth,
                 retry_invoker=mock_retry_invoker,
                 function_name="test-scraper",
-                wrapper_factory=lambda cookies: cached_rer_client,
+                client_factory=lambda cookies: cached_rer_client,
                 dry_run=True,
             )
 

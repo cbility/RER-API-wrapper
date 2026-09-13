@@ -2,7 +2,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from rer_api_wrapper import RERClient
+from rer_client import RERClient
 
 BREAKDOWN_HTML = """
 <form>
@@ -27,19 +27,19 @@ BREAKDOWN_HTML = """
 
 
 def test_select_certificates_posts_all_ranges_inclusive():
-    wrapper = RERClient.__new__(RERClient)
+    client = RERClient.__new__(RERClient)
     get_response = Mock(text=BREAKDOWN_HTML)
     post_response = Mock()
-    wrapper._request = Mock(side_effect=[get_response, post_response])
+    client._request = Mock(side_effect=[get_response, post_response])
 
-    wrapper.select_certificates(
+    client.select_certificates(
         "GEN0202802", "rego", "Wind Farm", "Apr 2025", "May 2025"
     )
 
     endpoint = "Organisations/GEN0202802/Certificates/REGO/Breakdown"
-    assert wrapper._request.call_args_list[0].args == (endpoint,)
-    assert wrapper._request.call_args_list[1].args == (endpoint,)
-    assert wrapper._request.call_args_list[1].kwargs == {
+    assert client._request.call_args_list[0].args == (endpoint,)
+    assert client._request.call_args_list[1].args == (endpoint,)
+    assert client._request.call_args_list[1].kwargs == {
         "method": "POST",
         "data": {
             "selectedCertificates": ["12345", "67890"],
@@ -50,8 +50,8 @@ def test_select_certificates_posts_all_ranges_inclusive():
 
 
 def test_select_certificates_rejects_existing_selection():
-    wrapper = RERClient.__new__(RERClient)
-    wrapper._request = Mock(
+    client = RERClient.__new__(RERClient)
+    client._request = Mock(
         return_value=Mock(
             text=BREAKDOWN_HTML.replace(
                 "<form>", '<form><button name="removeId" value="12345">Remove</button>'
@@ -60,8 +60,8 @@ def test_select_certificates_rejects_existing_selection():
     )
 
     with pytest.raises(ValueError, match="already selected"):  # type: ignore[call-overload]
-        wrapper.select_certificates(
+        client.select_certificates(
             "GEN0202802", "REGO", "Wind Farm", "Apr 2025", "May 2025"
         )
 
-    assert wrapper._request.call_count == 1
+    assert client._request.call_count == 1

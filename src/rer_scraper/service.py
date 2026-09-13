@@ -6,8 +6,8 @@ from datetime import datetime
 
 import requests
 
-from rer_api_wrapper import RERClient
-from rer_api_wrapper.models import (
+from rer_client import RERClient
+from rer_client.models import (
     CertificatesOverview,
     OrganisationStation,
     OrganisationSummary,
@@ -97,7 +97,7 @@ class RERScraperService:
     - RERSmartSuiteClient for SmartSuite API interactions
     - SessionAuthClient for RER session management
     - RetryInvoker for scheduling retry executions
-    - wrapper_factory for creating RER API wrapper instances
+    - client_factory for creating RER client instances
     """
 
     def __init__(
@@ -106,14 +106,14 @@ class RERScraperService:
         session_auth: SessionAuthClient,
         retry_invoker: RetryInvoker,
         function_name: str,
-        wrapper_factory: Callable[[dict[str, str]], RERClient] = RERClient,
+        client_factory: Callable[[dict[str, str]], RERClient] = RERClient,
         dry_run: bool = False,
     ):
         self.smartsuite = smartsuite
         self.session_auth = session_auth
         self.retry_invoker = retry_invoker
         self.function_name = function_name
-        self.wrapper_factory = wrapper_factory
+        self.client_factory = client_factory
         self.dry_run = dry_run
 
     def run(self, schedule_retry: bool = True) -> tuple[int, ScraperResult | None]:
@@ -128,7 +128,7 @@ class RERScraperService:
                 self.retry_invoker.invoke(self.function_name, {"retry_scrape": True})
             return 202, None
 
-        rer = self.wrapper_factory(cookies)
+        rer = self.client_factory(cookies)
         result = ScraperResult()
         if "refresh_data" in operations:
             organisations, stations, certificates = self.get_current_data(rer)
@@ -163,14 +163,14 @@ class RERScraperService:
 
     def prepare_transfer(
         self,
-        wrapper: RERClient,
+        client: RERClient,
         transfer: TransferInstruction,
     ) -> TransferPreparationResult:
-        source_station = wrapper.get_station(transfer.source_station_id)
+        source_station = client.get_station(transfer.source_station_id)
         source_organisation_id = self._find_source_organisation_id(
-            wrapper, transfer.source_station_id
+            client, transfer.source_station_id
         )
-        recipient = wrapper.find_transfer_organisation(
+        recipient = client.find_transfer_organisation(
             source_organisation_id,
             transfer.destination_generator_reference,
             transfer.certificate_type,
@@ -184,7 +184,7 @@ class RERScraperService:
             )
 
         try:
-            wrapper.select_certificates(
+            client.select_certificates(
                 source_organisation_id,
                 transfer.certificate_type,
                 source_station.station_name,

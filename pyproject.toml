@@ -1,7 +1,7 @@
 [project]
-name = "rer-api-wrapper"
+name = "rer-client"
 version = "0.1.0"
-description = "Automation-friendly API wrapper for the Renewable Electricity Register."
+description = "Automation-friendly client for the Renewable Electricity Register."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -19,10 +19,10 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src", "session_auth"]
-include = ["rer_api_wrapper*", "rer_scraper*", "rer_session_auth*"]
+include = ["rer_client*", "rer_scraper*", "rer_session_auth*"]
 
 [tool.setuptools.package-data]
-rer_api_wrapper = ["py.typed"]
+rer_client = ["py.typed"]
 
 [dependency-groups]
 dev = [

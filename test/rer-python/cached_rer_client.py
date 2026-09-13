@@ -14,7 +14,7 @@ The cache is organized by endpoint:
 
 Usage:
     # In tests
-    from test.rer-python.cached_wrapper import CachedRERClient, FIXTURES_DIR
+    from test.rer-python.cached_client import CachedRERClient, FIXTURES_DIR
 
     rer = CachedRERClient(FIXTURES_DIR)
     orgs = rer.get_user_organisations()  # Loads from cache
@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Any
 import requests
 
-from rer_api_wrapper import RERClient
+from rer_client import RERClient
 
 FIXTURES_DIR = Path(__file__).parent.parent / "rer-html" / "snapshots" / "latest"
 """Default location for cached HTML fixtures."""
@@ -38,7 +38,7 @@ class CachedRERClient(RERClient):
     Fails with a clear error if a cached response is not found.
 
     Example:
-        >>> from test.rer-python.cached_wrapper import CachedRERClient, FIXTURES_DIR
+        >>> from test.rer-python.cached_client import CachedRERClient, FIXTURES_DIR
         >>> rer = CachedRERClient(FIXTURES_DIR)
         >>> orgs = rer.get_user_organisations()  # Loads from cache
     """
@@ -175,14 +175,14 @@ class CachedRERClient(RERClient):
         return response
 
 
-def create_cached_wrapper(
+def create_cached_client(
     cache_dir: Path | None = None,
     auth_cookies: dict | None = None,
 ) -> CachedRERClient:
     """
     Factory function to create a CachedRERClient instance.
 
-    This is the preferred way to create a cached client for use with wrapper_factory.
+    This is the preferred way to create a cached client for use with client_factory.
 
     Args:
         cache_dir: Directory containing cached HTML files. Defaults to FIXTURES_DIR.
@@ -194,7 +194,7 @@ def create_cached_wrapper(
     Example:
         >>> service = RERScraperService(
         ...     ...,
-        ...     wrapper_factory=lambda cookies: create_cached_wrapper(),
+        ...     client_factory=lambda cookies: create_cached_client(),
         ... )
     """
     return CachedRERClient(cache_dir, auth_cookies)

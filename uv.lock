@@ -1016,7 +1016,7 @@ wheels = [
 ]
 
 [[package]]
-name = "rer-api-wrapper"
+name = "rer-client"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
