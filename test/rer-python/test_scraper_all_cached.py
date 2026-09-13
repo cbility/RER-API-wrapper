@@ -3,13 +3,6 @@
 These tests run the actual scraper service against all cached HTML data
 to verify the full scraping and parsing logic works correctly.
 
-Features:
-- ✅ Real RERScraperService class (not mocked)
-- ✅ CachedRERClient for all RER API calls (uses cached HTML)
-- ✅ ALL cached organisations from test/rer-html/snapshots/latest/
-- ✅ Full logging output during test execution
-- ✅ dry_run mode enabled (no SmartSuite writes)
-
 Usage:
     # Run with dry_run=True (default, no SmartSuite writes)
     uv run pytest test/rer-python/test_scraper_all_cached.py -v -s
@@ -19,6 +12,8 @@ Usage:
 
     # Run with specific log level
     uv run pytest test/rer-python/test_scraper_all_cached.py -v --log-cli-level=INFO
+
+    Note: you can regenerate snapshots by running 'uv run python test/rer-html/fetch_all_snapshots.py'
 
 Requirements:
     - Cached HTML files in test/rer-html/snapshots/latest/
