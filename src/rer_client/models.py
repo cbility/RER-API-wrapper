@@ -37,21 +37,37 @@ class RERRequest(RERModel):
 class OrganisationSummary(RERModel):
     """Summary of an organisation from the user dashboard.
 
+    Represents organisations visible to the authenticated user on the /User
+    endpoint. Each organisation includes basic details and the user's access
+    status for that organisation.
+
+    Fields:
+        organisation_id: Unique organisation identifier (e.g., "GEN0213742")
+        name: Organisation/company name
+        type: Organisation type (e.g., "Generator Commercial", "Generator Domestic")
+        task_count: Number of outstanding tasks requiring attention
+        status: Account approval status (e.g., "Approved", "Pending", "Revoked")
+        user_status: User's access status with this organisation. Common values:
+            - "Active": User has active access to the organisation
+            - "Suspended": User access is suspended or removed
+
     Example:
         organisation_id: "GEN0213742"
         name: "GLENSKINNO BIOFUELS LTD"
         type: "Generator Commercial"
         task_count: 685
-        status: " APPROVED"
-        user_status: "Active" (or similar user relationship status)
+        status: "Approved"
+        user_status: "Active"
     """
 
     organisation_id: str  # Unique organisation identifier, e.g., "GEN0213742"
     name: str  # Organisation/company name
     type: str  # Organisation type, e.g., "Generator Commercial", "Generator Domestic"
     task_count: int  # Number of outstanding tasks for this organisation
-    status: str  # Account status, e.g., " APPROVED", "Pending"
-    user_status: str  # User's relationship/role status with this organisation
+    status: str  # Account status, e.g., " Approved", "Pending"
+    user_status: (
+        str  # User's access status with this organisation (e.g., "Active", "Suspended")
+    )
 
 
 @dataclass
