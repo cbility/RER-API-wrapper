@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import asdict
 import json
 import os
 from typing import Any
@@ -8,7 +9,6 @@ from rer_scraper.service import (
     RERScraperService,
     RetryInvoker,
     SessionAuthClient,
-    result_body,
 )
 from rer_scraper.smartsuite import RERSmartSuiteClient
 
@@ -83,5 +83,5 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any] | None:
     return {
         "statusCode": 200,
         "headers": {"Content-Type": "application/json"},
-        "body": result_body(result),
+        "body": RERScraperService.parse_scraper_result(result),
     }

@@ -3,6 +3,7 @@ import json
 from dataclasses import asdict
 from typing import Any, Callable, Protocol
 from datetime import datetime
+from unittest import result
 
 import requests
 
@@ -28,7 +29,10 @@ import logging
 # region configuration
 logger = logging.getLogger(__name__)
 
+# endregion configuration
 
+
+# region support classes
 class RetryInvoker(Protocol):
     """
     Protocol defining a contract for triggering retry executions of the scraper Lambda function.
@@ -80,6 +84,11 @@ class SessionAuthClient:
         if not isinstance(cookies, dict):
             raise ValueError("Session-auth API response did not include cookies.")
         return {str(name): str(value) for name, value in cookies.items()}
+
+
+# endregion support classes
+
+# region main class
 
 
 class RERScraperService:
@@ -274,6 +283,9 @@ class RERScraperService:
             f"Station {station_id!r} is not available to the authenticated user."
         )
 
+    @staticmethod
+    def parse_scraper_result(result: ScraperResult | None) -> str:
+        return json.dumps(asdict(result)) if result else "{}"
 
-def result_body(result: ScraperResult | None) -> str:
-    return json.dumps(asdict(result) if result else {})
+
+# endregion main class
