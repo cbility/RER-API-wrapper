@@ -112,7 +112,7 @@ class OrganisationDetail(RERModel):
         name: Organisation/company name
         type: Organisation type (e.g., "Generator Commercial", "Generator Domestic")
         status: Account approval status (e.g., "APPROVED", "Pending", "Revoked")
-        address: Registered address as a list of lines (street, city, postcode, country)
+        address: Registered address as a list of lines (line 1, [line 2,] city, [region,] postcode, country)
         contact: Primary contact person's name and email
 
     Example:
