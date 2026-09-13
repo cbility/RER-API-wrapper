@@ -13,6 +13,7 @@ from datetime import datetime
 
 from rer_client.models import (
     CertificatesOverview,
+    OrganisationDetail,
     OrganisationStation,
     OrganisationSummary,
 )
@@ -106,12 +107,26 @@ class RERSmartSuiteClient(SmartSuiteClient):
 
     # region mappers
 
-    def map_organisation(self, rer_organisation: OrganisationSummary):
+    def map_organisation(
+        self,
+        rer_organisation_summary: OrganisationSummary,
+        rer_organisation_details: OrganisationDetail,
+    ):
         ss_organisation = {
-            "sde6082ea0": rer_organisation.name,  # generator/company name
-            "s44395f753": rer_organisation.organisation_id,  # organisation id
-            "s90b4a920a": rer_organisation.type,
-            "sf3acd7357": rer_organisation.status,
+            "sde6082ea0": rer_organisation_summary.name,  # generator/company name
+            "s44395f753": rer_organisation_summary.organisation_id,  # organisation id
+            "s90b4a920a": rer_organisation_summary.type,
+            "sf3acd7357": rer_organisation_summary.status,
+            "s2cad6c1e7": ", ".join(rer_organisation_details.address),
+            "s8102cbd5d": rer_organisation_details.contact.email,
+            "s4e25eef9b": {
+                "first_name": rer_organisation_details.contact.name.split(" ")[0],
+                "last_name": " ".join(
+                    rer_organisation_details.contact.name.split(" ")[1:]
+                ),
+            },
+            "s90b4a920a": rer_organisation_details.type,
+            "s8aaed9a66": rer_organisation_summary.user_status,
         }
         return ss_organisation
 
