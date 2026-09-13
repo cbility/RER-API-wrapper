@@ -109,6 +109,8 @@ class RERScraperService:
     - client_factory for creating RER client instances
     """
 
+    # region initialisation
+
     def __init__(
         self,
         smartsuite: RERSmartSuiteClient,
@@ -124,6 +126,9 @@ class RERScraperService:
         self.function_name = function_name
         self.client_factory = client_factory
         self.dry_run = dry_run
+
+    # endregion initialisation
+    # region orchestrator
 
     def run(self, schedule_retry: bool = True) -> tuple[int, ScraperResult | None]:
         run_start = datetime.now()
@@ -149,9 +154,12 @@ class RERScraperService:
 
         return 200, result
 
+    # endregion orchestrator
+    # region data refresh helpers
+
     def get_current_data(self, rer: RERClient):
-        organisations = rer.get_user_organisations()
-        logger.info(f"Fetched {len(organisations)} organisations")
+        organisations = rer.get_user_org_summary()
+        logger.info(f"Fetched {len(organisations)} user organisations")
         logger.debug(f"Organisations: {organisations}")
         organisation_stations = [
             rer.get_organisation_stations(organisation.organisation_id)
@@ -169,6 +177,63 @@ class RERScraperService:
         logger.debug(f"Certificates: {organisation_certificates}")
 
         return organisations, organisation_stations, organisation_certificates
+
+    def update_rer_organisations(
+        self,
+        organisations: list[OrganisationSummary],
+    ):
+        """
+        Updates organisation and station records on SmartSuite with the passed details.
+        Updates records if they already exist, otherwise creates new records.
+        Certificate information is used to create statistics and stores at the station level.
+        """
+
+        ss_organisations = (
+            [] if self.dry_run else self.smartsuite.get_current_organisations()
+        )
+
+        # spit records into updates and inserts
+
+        update_orgs = []
+        insert_orgs = []
+        logger.info(f"Processing {len(organisations)} organisations")
+        for org in organisations:
+            logger.debug(f"   {org}")
+            ss_org_record = next(
+                (
+                    ss_org
+                    for ss_org in ss_organisations
+                    if self.smartsuite.get_organisation_id(ss_org)
+                    == org.organisation_id
+                ),
+                None,
+            )
+            if ss_org_record is not None:
+                update_orgs.append(
+                    {**self.smartsuite.map_organisation(org), "id": ss_org_record["id"]}
+                )
+            else:
+                insert_orgs.append(self.smartsuite.map_organisation(org))
+
+        if update_orgs:
+            logger.info(f"{len(update_orgs)} organisations to UPDATE")
+            for org in update_orgs:
+                logger.debug(f"  {org}")
+
+        if insert_orgs:
+            logger.info(f"{len(insert_orgs)} organisations to CREATE")
+            for org in insert_orgs:
+                logger.debug(f"  {org}")
+
+        if not self.dry_run:
+            self.smartsuite.update_organisations(update_orgs)
+            self.smartsuite.create_organisations(insert_orgs)
+        else:
+            logger.warning("Dry run mode: skipping SmartSuite writes")
+
+    # endregion data refresh helpers
+
+    # region cert transfer helpers
 
     def prepare_transfer(
         self,
@@ -216,66 +281,9 @@ class RERScraperService:
             selected=True,
         )
 
-    def update_rer_organisations(
-        self,
-        organisations: list[OrganisationSummary],
-    ):
-        """
-        Updates organisation and station records on SmartSuite with the passed details.
-        Updates records if they already exist, otherwise creates new records.
-        Certificate information is used to create statistics and stores at the station level.
-        """
-
-        ss_organisations = (
-            [] if self.dry_run else self.smartsuite.get_current_organisations()
-        )
-
-        # spit records into updates and inserts
-
-        update_orgs = []
-        insert_orgs = []
-        for org in organisations:
-            ss_org_record = next(
-                (
-                    ss_org
-                    for ss_org in ss_organisations
-                    if self.smartsuite.get_organisation_id(ss_org)
-                    == org.organisation_id
-                ),
-                None,
-            )
-            if ss_org_record is not None:
-                update_orgs.append(
-                    {**self.smartsuite.map_organisation(org), "id": ss_org_record["id"]}
-                )
-            else:
-                insert_orgs.append(self.smartsuite.map_organisation(org))
-
-        logger.info(
-            f"Found {len(update_orgs)} orgs to be updated and {len(insert_orgs)} to be created"
-        )
-
-        if update_orgs:
-            logger.info("Organisations to UPDATE:")
-            for org in update_orgs:
-                logger.info(f"  {org}")
-
-        if insert_orgs:
-            logger.info("Organisations to CREATE:")
-            for org in insert_orgs:
-                logger.info(f"  {org}")
-
-        if not self.dry_run:
-            self.smartsuite.update_organisations(update_orgs)
-            self.smartsuite.create_organisations(insert_orgs)
-        else:
-            logger.warning("Dry run mode: skipping SmartSuite writes")
-
-        # map RER fields onto smartsuite fields
-
     @staticmethod
     def _find_source_organisation_id(rer: RERClient, station_id: str) -> str:
-        for organisation in rer.get_user_organisations():
+        for organisation in rer.get_user_org_summary():
             stations = rer.get_organisation_stations(organisation.organisation_id)
             if any(station.station_id == station_id for station in stations):
                 return organisation.organisation_id
@@ -283,9 +291,14 @@ class RERScraperService:
             f"Station {station_id!r} is not available to the authenticated user."
         )
 
+    # endregion certificate transfer helpers
+    # region exported helpers
+
     @staticmethod
     def parse_scraper_result(result: ScraperResult | None) -> str:
         return json.dumps(asdict(result)) if result else "{}"
+
+    # endregion exported helpers
 
 
 # endregion main class

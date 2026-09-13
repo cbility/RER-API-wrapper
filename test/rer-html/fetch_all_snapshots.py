@@ -108,7 +108,7 @@ def main():
 
     # Get all organisations
     log.info("Fetching organisation list...")
-    organisations = client.get_user_organisations()
+    organisations = client.get_user_org_summary()
     log.info(f"Found {len(organisations)} organisation(s)")
     log.info("")
 

@@ -108,7 +108,7 @@ class RERClient:
         response = self._request("User")
         return rer_parsing._parse_user(response.text)
 
-    def get_user_organisations(
+    def get_user_org_summary(
         self,
         sort_field: str | None = None,
         sort_direction: str | None = None,
