@@ -55,13 +55,13 @@ logging.getLogger("httpcore").setLevel(logging.WARNING)
 def cached_wrapper():
     """Create cached wrapper with ALL available HTML."""
     wrapper = CachedRERWrapper(FIXTURES_DIR)
-    logger.info(f"✓ Cached wrapper initialized with fixtures from: {FIXTURES_DIR}")
+    logger.info(f"Cached wrapper initialized with fixtures from: {FIXTURES_DIR}")
 
     # Count available organisations (FIXTURES_DIR already points to 'latest')
     org_count = len(
         [d for d in FIXTURES_DIR.iterdir() if d.is_dir() and d.name != "_user"]
     )
-    logger.info(f"✓ Found {org_count} cached organisations")
+    logger.info(f"Found {org_count} cached organisations")
 
     return wrapper
 
@@ -164,13 +164,13 @@ class TestScraperAllCachedData:
             dry_run=True,
         )
 
-        logger.info(f"✓ RERScraperService created (dry_run={service.dry_run})")
+        logger.info(f"RERScraperService created (dry_run={service.dry_run})")
 
         # Run the service
         status_code, result = service.run()
 
         # Verify execution
-        logger.info(f"✓ Service completed with status: {status_code}")
+        logger.info(f"Service completed with status: {status_code}")
 
         assert status_code == 200, f"Expected 200, got {status_code}"
         assert result is not None, "Result should not be None"
@@ -232,7 +232,7 @@ class TestScraperAllCachedData:
             try:
                 status_code, result = service.run()
 
-                logger.info(f"✓ {org_id}: Status {status_code}")
+                logger.info(f"{org_id}: Status {status_code}")
 
                 # Should succeed for most organisations
                 assert status_code in [
@@ -245,7 +245,7 @@ class TestScraperAllCachedData:
                 raise
 
         logger.info(f"\n{'='*60}")
-        logger.info(f"✓ All {len(org_ids)} organisations processed successfully")
+        logger.info(f"All {len(org_ids)} organisations processed successfully")
         logger.info(f"{'='*60}")
 
 
